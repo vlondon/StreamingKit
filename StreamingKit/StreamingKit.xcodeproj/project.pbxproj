@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1ACC25D119A6288E00F6B2A7 /* STKEventScheduler.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ACC25CF19A6288E00F6B2A7 /* STKEventScheduler.h */; };
+		1ACC25D219A6288E00F6B2A7 /* STKEventScheduler.m in Sources */ = {isa = PBXBuildFile; fileRef = 1ACC25D019A6288E00F6B2A7 /* STKEventScheduler.m */; };
+		1ACC25D319A6288E00F6B2A7 /* STKEventScheduler.m in Sources */ = {isa = PBXBuildFile; fileRef = 1ACC25D019A6288E00F6B2A7 /* STKEventScheduler.m */; };
 		A1A4996B189E744400E2A2E2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1A4996A189E744400E2A2E2 /* Cocoa.framework */; };
 		A1A49975189E744500E2A2E2 /* StreamingKitMac.m in Sources */ = {isa = PBXBuildFile; fileRef = A1A49974189E744500E2A2E2 /* StreamingKitMac.m */; };
 		A1A4997B189E744500E2A2E2 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1E7C4D9188D57F60010896F /* XCTest.framework */; };
@@ -83,6 +86,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1ACC25CF19A6288E00F6B2A7 /* STKEventScheduler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STKEventScheduler.h; sourceTree = "<group>"; };
+		1ACC25D019A6288E00F6B2A7 /* STKEventScheduler.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STKEventScheduler.m; sourceTree = "<group>"; };
 		A1A49969189E744400E2A2E2 /* libStreamingKitMac.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libStreamingKitMac.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1A4996A189E744400E2A2E2 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		A1A4996D189E744500E2A2E2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -262,6 +267,7 @@
 		A1E7C4CD188D57F50010896F /* StreamingKit */ = {
 			isa = PBXGroup;
 			children = (
+				A1E7C4CE188D57F50010896F /* Supporting Files */,
 				A1E7C4F1188D5E550010896F /* STKAudioPlayer.h */,
 				A1E7C4F2188D5E550010896F /* STKAudioPlayer.m */,
 				A1E7C4F3188D5E550010896F /* STKAutoRecoveringHTTPDataSource.h */,
@@ -278,9 +284,10 @@
 				A1E7C4FE188D5E550010896F /* STKLocalFileDataSource.m */,
 				A1BF65D0189A6582004DD08C /* STKQueueEntry.h */,
 				A1BF65D1189A6582004DD08C /* STKQueueEntry.m */,
+				1ACC25CF19A6288E00F6B2A7 /* STKEventScheduler.h */,
+				1ACC25D019A6288E00F6B2A7 /* STKEventScheduler.m */,
 				A1BF65D3189A65C6004DD08C /* NSMutableArray+STKAudioPlayer.h */,
 				A1BF65D4189A65C6004DD08C /* NSMutableArray+STKAudioPlayer.m */,
-				A1E7C4CE188D57F50010896F /* Supporting Files */,
 			);
 			path = StreamingKit;
 			sourceTree = "<group>";
@@ -318,6 +325,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1ACC25D119A6288E00F6B2A7 /* STKEventScheduler.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -477,6 +485,7 @@
 				A1A49995189E746B00E2A2E2 /* STKLocalFileDataSource.m in Sources */,
 				A1A49997189E747000E2A2E2 /* NSMutableArray+STKAudioPlayer.m in Sources */,
 				A1A4998E189E745900E2A2E2 /* STKAudioPlayer.m in Sources */,
+				1ACC25D319A6288E00F6B2A7 /* STKEventScheduler.m in Sources */,
 				A1A49993189E746500E2A2E2 /* STKDataSourceWrapper.m in Sources */,
 				A1A49992189E746300E2A2E2 /* STKDataSource.m in Sources */,
 				A1A49975189E744500E2A2E2 /* StreamingKitMac.m in Sources */,
@@ -497,6 +506,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1E7C501188D5E550010896F /* STKCoreFoundationDataSource.m in Sources */,
+				1ACC25D219A6288E00F6B2A7 /* STKEventScheduler.m in Sources */,
 				A1E7C4FF188D5E550010896F /* STKAudioPlayer.m in Sources */,
 				A1E7C505188D5E550010896F /* STKLocalFileDataSource.m in Sources */,
 				A1BF65D2189A6582004DD08C /* STKQueueEntry.m in Sources */,

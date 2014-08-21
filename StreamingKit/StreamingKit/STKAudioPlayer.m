@@ -615,6 +615,12 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
 
 +(STKDataSource*) dataSourceFromURL:(NSURL*)url
 {
+    return [STKAudioPlayer dataSourceFromURL:url httpRequestHeaders:nil];
+}
+
+
++(STKDataSource*) dataSourceFromURL:(NSURL*)url httpRequestHeaders:(NSDictionary *)requestHeaders
+{
     STKDataSource* retval = nil;
     
     if ([url.scheme isEqualToString:@"file"])
@@ -623,11 +629,12 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
     }
     else if ([url.scheme caseInsensitiveCompare:@"http"] == NSOrderedSame || [url.scheme caseInsensitiveCompare:@"https"] == NSOrderedSame)
     {
-        retval = [[STKAutoRecoveringHTTPDataSource alloc] initWithHTTPDataSource:[[STKHTTPDataSource alloc] initWithURL:url]];
+        retval = [[STKAutoRecoveringHTTPDataSource alloc] initWithHTTPDataSource:[[STKHTTPDataSource alloc] initWithURL:url httpRequestHeaders:requestHeaders]];
     }
     
     return retval;
 }
+
 
 -(void) clearQueue
 {
