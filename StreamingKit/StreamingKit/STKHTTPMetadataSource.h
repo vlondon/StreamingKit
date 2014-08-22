@@ -1,5 +1,5 @@
 /******************************************************************************
- STKEventScheduler.m
+ STKHTTPMetadataSource.h
  StreamingKit
  
  Created by James Gordon on 21/08/2014.
@@ -33,8 +33,25 @@
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 
-#import "STKEventScheduler.h"
+#define METADATA_LENGTH_MULTIPLY_FACTOR 16
+#define METADATA_INTERVAL_CHAR 1
 
-@implementation STKEventScheduler
+#import "STKHTTPDataSource.h"
+
+/*
+ We know buffer size in frames - 10sec * 44,100 = 410,000 frames
+ We know frame size - channel size (16) * no. channes (2) = 32bits
+ We can therefore determine from where in the buffer an event happens
+ (or will happen) and so when we send a block of the stream buffer
+ through to the AU graph, we know what frame we're on and can send
+ any events that occur between the start and end frame.
+ */
+@interface STKHTTPMetadataSource : STKHTTPDataSource
+
+// Sample frequency in Hz
+@property (nonatomic) float sampleRate;
+
+// Use this to determine what frame we're on based on the number of bytes read.
+@property (nonatomic) float decompressedBitsPerFrame;
 
 @end
