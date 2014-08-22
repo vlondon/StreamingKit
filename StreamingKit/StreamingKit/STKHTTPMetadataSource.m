@@ -219,13 +219,6 @@
  */
 - (void)metadataReadSuccessfully:(NSMutableData*)aMetadataBuffer
 {
-//    [[STKGlobalStreamEvents sharedEvents] createEventWithData:[NSData dataWithBytes:(const char*)aMetadataBuffer.mutableBytes length:aMetadataBuffer.length] onFrame:self.metadataFrame];
-//    [aMetadataBuffer setLength:0];
-    
-    NSString *metadata = [[NSString alloc] initWithBytes:aMetadataBuffer.mutableBytes length:aMetadataBuffer.length encoding:NSUTF8StringEncoding];
-    NSLog(@"%@", metadata);
-    
-    [aMetadataBuffer setLength:0];
 }
 
 
