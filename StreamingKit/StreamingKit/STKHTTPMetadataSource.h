@@ -43,7 +43,7 @@
 
 @protocol STKHTTPMetadataSoureceDelegate <NSObject>
 
-- (void)didReceive:(NSData *)metadata;
+- (void)didReceive:(NSData *)metadata at:(SInt64)frame;
 
 @end
 

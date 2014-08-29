@@ -123,9 +123,8 @@
 
 /*
  @brief Extract any blocks of metadata contained within the passed buffer.
- @discussion    The metadata extraction is cyclic, so if we have multiple blocks
- of metadata contained within the buffer, we'll exctract each one
- sequentially.
+ @discussion    The metadata extraction is cyclic, so if we have multiple blocks of metadata contained within the
+                buffer, we'll exctract each one sequentially.
  
  @param buffer containing the input stream data
  @param bufferLength specifies how much data there is to read.
@@ -134,8 +133,7 @@
  */
 - (int)readMetadataFromCurrentBuffer:(UInt8 *)buffer bufferLength:(int)bufferLength
 {
-	// We have to use while here, because there might me multiple metadatas
-	// within single buffer
+	// We have to use while here, because there might be multiple metadata within single buffer.
 	while (self.bytesUntilMetadata < bufferLength && self.metadataSize == 0)
 	{
         // Calculate what frame our metadata starts on
@@ -175,13 +173,12 @@
 
 /*
  @brief Attempt to finish read of metadata
- @discussion    If we have a read of metadata that spans multiple bursts of data
- from the stream, we use this function to append to data already
- read from previous burst(s) for this block of metadata.
+ @discussion    If we have a read of metadata that spans multiple bursts of data from the stream, we use this function 
+                to append to data already read from previous burst(s) for this block of metadata.
  
- @param buffer to read from
- @param bufferLength specifies how much of the buffer there is to read. If this is less than the amount of metadata we 
-                    have left to read, we'll have to wait for the next stream burst before we can our metadata read.
+ @param buffer  to read from
+ @param bufferLength Specifies how much of the buffer there is to read. If this is less than the amount of metadata
+                    we have left to read, we'll have to wait for the next stream burst before we can our metadata read.
  
  @return Amount of non-metadata bytes contained within the buffer.
  */
@@ -210,8 +207,7 @@
 
 
 /*
- @brief On completion of reading a metadata block, create an event for future
- invocation.
+ @brief On completion of reading a metadata block, create an event for future invocation.
  
  @param aMetadataBuffer contains the bytes containing metadata from the stream.
  
@@ -223,7 +219,7 @@
     NSData *receivedMetadata = [NSData dataWithBytes:aMetadataBuffer.bytes length:aMetadataBuffer.length];
     aMetadataBuffer.length = 0;
     
-    [self.metadataDelegate didReceive:receivedMetadata];
+    [self.metadataDelegate didReceive:receivedMetadata at:self.metadataFrame];
 }
 
 
