@@ -77,11 +77,11 @@
             NSDictionary *httpHeaders = (__bridge_transfer NSDictionary*)CFHTTPMessageCopyAllHeaderFields((CFHTTPMessageRef)response);
             
             // Get metadata step from icecast response header
-            _metadataStep = [httpHeaders[@"icy-metaint"] intValue];
+            _metadataStep = [httpHeaders[KEY_ICECAST_METADATA_INT] intValue];
             self.bytesUntilMetadata = self.metadataStep;
             
             // Stream header defines bitrate in kbps, but we want bps, so multiply by 1000.
-            NSArray *bitrateHeader = [httpHeaders[@"icy-br"] componentsSeparatedByString:@", "];
+            NSArray *bitrateHeader = [httpHeaders[KEY_ICECAST_BITRATE] componentsSeparatedByString:ICECAST_BITRATE_SEPARATOR];
             float compressedBitrate = [[bitrateHeader objectAtIndex:0] floatValue] * 1000;
             float compressionRatio = compressedBitrate / (self.sampleRate * self.decompressedBitsPerFrame);
             
@@ -219,6 +219,11 @@
  */
 - (void)metadataReadSuccessfully:(NSMutableData*)aMetadataBuffer
 {
+    // Very simply want to extract bytes and then alert any insterested listener
+    NSData *receivedMetadata = [NSData dataWithBytes:aMetadataBuffer.bytes length:aMetadataBuffer.length];
+    aMetadataBuffer.length = 0;
+    
+    [self.metadataDelegate didReceive:receivedMetadata];
 }
 
 

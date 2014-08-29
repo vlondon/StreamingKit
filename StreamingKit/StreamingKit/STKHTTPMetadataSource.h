@@ -35,8 +35,18 @@
 
 #define METADATA_LENGTH_MULTIPLY_FACTOR 16
 #define METADATA_INTERVAL_CHAR 1
+#define KEY_ICECAST_METADATA_INT @"icy-metaint"
+#define KEY_ICECAST_BITRATE @"icy-br"
+#define ICECAST_BITRATE_SEPARATOR @", " 
 
 #import "STKHTTPDataSource.h"
+
+@protocol STKHTTPMetadataSoureceDelegate <NSObject>
+
+- (void)didReceive:(NSData *)metadata;
+
+@end
+
 
 /*
  We know buffer size in frames - 10sec * 44,100 = 410,000 frames
@@ -53,5 +63,8 @@
 
 // Use this to determine what frame we're on based on the number of bytes read.
 @property (nonatomic) float decompressedBitsPerFrame;
+
+// Who to alert when we receive some metadata.
+@property (nonatomic) id<STKHTTPMetadataSoureceDelegate> metadataDelegate;
 
 @end
