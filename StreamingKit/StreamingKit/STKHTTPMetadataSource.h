@@ -48,14 +48,6 @@
 @end
 
 
-/*
- We know buffer size in frames - 10sec * 44,100 = 410,000 frames
- We know frame size - channel size (16) * no. channes (2) = 32bits
- We can therefore determine from where in the buffer an event happens
- (or will happen) and so when we send a block of the stream buffer
- through to the AU graph, we know what frame we're on and can send
- any events that occur between the start and end frame.
- */
 @interface STKHTTPMetadataSource : STKHTTPDataSource
 
 // Sample frequency in Hz
