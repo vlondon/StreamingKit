@@ -2744,7 +2744,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 		}
     }
 
-	if (frameFilters)
+	if (frameFilters && 0 != totalFramesCopied)
 	{
 		NSUInteger count = frameFilters.count;
 		AudioStreamBasicDescription asbd = canonicalAudioStreamBasicDescription;
