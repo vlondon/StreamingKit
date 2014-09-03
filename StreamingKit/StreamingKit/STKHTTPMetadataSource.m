@@ -219,7 +219,10 @@
     NSData *receivedMetadata = [NSData dataWithBytes:aMetadataBuffer.bytes length:aMetadataBuffer.length];
     aMetadataBuffer.length = 0;
     
-    [self.metadataDelegate didReceive:receivedMetadata at:self.metadataFrame];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        [self.metadataDelegate didReceive:receivedMetadata at:self.metadataFrame];
+    });
+    
 }
 
 
