@@ -37,7 +37,8 @@
 #define METADATA_INTERVAL_CHAR 1
 #define KEY_ICECAST_METADATA_INT @"icy-metaint"
 #define KEY_ICECAST_BITRATE @"icy-br"
-#define ICECAST_BITRATE_SEPARATOR @", " 
+#define ICECAST_BITRATE_SEPARATOR @", "
+#define METADATA_PARSE_QUEUE "metadata_parse_queue"
 
 #import "STKHTTPDataSource.h"
 

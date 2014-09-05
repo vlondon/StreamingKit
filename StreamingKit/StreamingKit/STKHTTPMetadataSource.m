@@ -40,6 +40,7 @@
 
 @property (nonatomic, retain) NSMutableData *metadataBytes;
 @property (readonly) int metadataStep;
+@property (readonly) dispatch_queue_t metadataParseQueue;
 @property int bytesUntilMetadata;
 @property int metadataSize;
 
@@ -60,6 +61,8 @@
     if (nil != self)
     {
         self.metadataBytes = [[NSMutableData alloc] init];
+        
+        _metadataParseQueue = dispatch_queue_create(METADATA_PARSE_QUEUE, DISPATCH_QUEUE_SERIAL);
     }
     
     return self;
@@ -219,10 +222,17 @@
     NSData *receivedMetadata = [NSData dataWithBytes:aMetadataBuffer.bytes length:aMetadataBuffer.length];
     aMetadataBuffer.length = 0;
     
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_sync(self.metadataParseQueue, ^{
         [self.metadataDelegate didReceive:receivedMetadata at:self.metadataFrame];
     });
     
+}
+
+
+- (void)dealloc {
+    
+    // dispatch queues are not auto-released, so make sure we do that here.
+    dispatch_release(self.metadataParseQueue);
 }
 
 
