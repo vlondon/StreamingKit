@@ -62,9 +62,8 @@ const int NO_METADATA = -1;
     self = [super initWithURL:url httpRequestHeaders:httpRequestHeaders];
     if (nil != self)
     {
-        self.metadataBytes = [[NSMutableData alloc] init];
-        
         _metadataParseQueue = dispatch_queue_create(METADATA_PARSE_QUEUE, DISPATCH_QUEUE_SERIAL);
+        self.metadataBytes = [[NSMutableData alloc] init];
     }
     
     return self;
@@ -241,6 +240,16 @@ const int NO_METADATA = -1;
     
     // dispatch queues are not auto-released, so make sure we do that here.
     dispatch_release(self.metadataParseQueue);
+}
+
+
+#pragma mark overrides
+
+-(void) reconnect
+{
+    _metadataStep = 0;
+    
+    [super reconnect];
 }
 
 
