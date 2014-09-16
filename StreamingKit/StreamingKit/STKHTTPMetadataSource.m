@@ -222,7 +222,7 @@
     NSData *receivedMetadata = [NSData dataWithBytes:aMetadataBuffer.bytes length:aMetadataBuffer.length];
     aMetadataBuffer.length = 0;
     
-    dispatch_sync(self.metadataParseQueue, ^{
+    dispatch_async(self.metadataParseQueue, ^{
         [self.metadataDelegate didReceive:receivedMetadata at:self.metadataFrame];
     });
     
