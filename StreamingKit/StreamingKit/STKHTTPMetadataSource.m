@@ -36,6 +36,9 @@
 #import "STKHTTPMetadataSource.h"
 
 
+const int NO_METADATA = -1;
+
+
 @interface STKHTTPMetadataSource()
 
 @property (nonatomic, retain) NSMutableData *metadataBytes;
@@ -46,7 +49,6 @@
 
 // Used for determining when to trigger events
 @property SInt64 totalBytesRead;
-@property SInt64 metadataFrame;
 @property (readonly) float compressedBytesPerFrame;
 
 @end
@@ -81,15 +83,23 @@
             
             // Get metadata step from icecast response header
             _metadataStep = [httpHeaders[KEY_ICECAST_METADATA_INT] intValue];
-            self.bytesUntilMetadata = self.metadataStep;
             
-            // Stream header defines bitrate in kbps, but we want bps, so multiply by 1000.
-            NSArray *bitrateHeader = [httpHeaders[KEY_ICECAST_BITRATE] componentsSeparatedByString:ICECAST_BITRATE_SEPARATOR];
-            float compressedBitrate = [[bitrateHeader objectAtIndex:0] floatValue] * 1000;
-            float compressionRatio = compressedBitrate / (self.sampleRate * self.decompressedBitsPerFrame);
-            
-            // Multiply by 1/8 so we're working in bytes
-            _compressedBytesPerFrame = self.decompressedBitsPerFrame * compressionRatio * 0.125;
+            if (self.metadataStep > 0) {
+                self.bytesUntilMetadata = self.metadataStep;
+                
+                // Stream header defines bitrate in kbps, but we want bps, so multiply by 1000.
+                NSArray *bitrateHeader = [httpHeaders[KEY_ICECAST_BITRATE] componentsSeparatedByString:ICECAST_BITRATE_SEPARATOR];
+                float compressedBitrate = [[bitrateHeader objectAtIndex:0] floatValue] * 1000;
+                float compressionRatio = compressedBitrate / (self.sampleRate * self.decompressedBitsPerFrame);
+                
+                // Multiply by 1/8 so we're working in bytes
+                _compressedBytesPerFrame = self.decompressedBitsPerFrame * compressionRatio * 0.125;
+                
+            } else {
+                
+                // Note that we have no metadata so that we don't keep checking for it.
+                _metadataStep = NO_METADATA;
+            }
         }
     }
     
@@ -123,6 +133,7 @@
 }
 
 
+#pragma mark Metadata extraction
 
 /*
  @brief Extract any blocks of metadata contained within the passed buffer.
@@ -139,9 +150,6 @@
 	// We have to use while here, because there might be multiple metadata within single buffer.
 	while (self.bytesUntilMetadata < bufferLength && self.metadataSize == 0)
 	{
-        // Calculate what frame our metadata starts on
-        self.metadataFrame = (self.totalBytesRead + self.bytesUntilMetadata) / self.compressedBytesPerFrame;
-        
 		// Metadata position is within current buffer
 		self.metadataSize = buffer[self.bytesUntilMetadata] * METADATA_LENGTH_MULTIPLY_FACTOR;
 		int amountOfBytesTillEndOfBuffer = (int)(bufferLength - (self.bytesUntilMetadata + METADATA_INTERVAL_CHAR));
@@ -194,7 +202,7 @@
     
 	if (self.metadataSize == 0)
 	{
-		[self metadataReadSuccessfully:self.metadataBytes];
+		[self metadataReadSuccessfully:self.metadataBytes ];
         
 		// metadata cut-off
 		memmove(buffer, buffer + amountToRead, bufferLength - amountToRead);
@@ -223,7 +231,7 @@
     aMetadataBuffer.length = 0;
     
     dispatch_async(self.metadataParseQueue, ^{
-        [self.metadataDelegate didReceive:receivedMetadata at:self.metadataFrame];
+        [self.metadataDelegate didReceive:receivedMetadata at:(self.totalBytesRead + self.bytesUntilMetadata) / self.compressedBytesPerFrame];
     });
     
 }
