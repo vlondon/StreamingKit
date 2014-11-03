@@ -94,6 +94,8 @@ const int NO_METADATA = -1;
                 // Multiply by 1/8 so we're working in bytes
                 _compressedBytesPerFrame = self.decompressedBitsPerFrame * compressionRatio * 0.125;
                 
+                [self.metadataDelegate didStartReceive];
+                
             } else {
                 
                 // Note that we have no metadata so that we don't keep checking for it.
@@ -248,6 +250,8 @@ const int NO_METADATA = -1;
 -(void) reconnect
 {
     _metadataStep = 0;
+    self.totalBytesRead = 0;
+    self.metadataBytes.length = 0;
     
     [super reconnect];
 }
