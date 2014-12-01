@@ -295,7 +295,7 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
         .componentFlagsMask = 0
 	};
     
-    const int bytesPerSample = sizeof(AudioSampleType);
+    const int bytesPerSample = 2;
     
     canonicalAudioStreamBasicDescription = (AudioStreamBasicDescription)
     {
@@ -1887,7 +1887,7 @@ static BOOL GetHardwareCodecClassDesc(UInt32 formatId, AudioClassDescription* cl
 {
     OSStatus status;
     Boolean writable;
-	UInt32 cookieSize;
+    UInt32 cookieSize = 0;
     
     if (memcmp(asbd, &audioConverterAudioStreamBasicDescription, sizeof(AudioStreamBasicDescription)) == 0)
     {
@@ -1919,11 +1919,16 @@ static BOOL GetHardwareCodecClassDesc(UInt32 formatId, AudioClassDescription* cl
 
     audioConverterAudioStreamBasicDescription = *asbd;
     
-	status = AudioFileStreamGetPropertyInfo(audioFileStream, kAudioFileStreamProperty_MagicCookieData, &cookieSize, &writable);
+    if (self->currentlyReadingEntry.dataSource.audioFileTypeHint != kAudioFileAAC_ADTSType)
+    {
+        status = AudioFileStreamGetPropertyInfo(audioFileStream, kAudioFileStreamProperty_MagicCookieData, &cookieSize, &writable);
     
-	if (!status)
-	{
-    	void* cookieData = alloca(cookieSize);
+        if (status)
+        {
+            return;
+        }
+        
+        void* cookieData = alloca(cookieSize);
         
         status = AudioFileStreamGetProperty(audioFileStream, kAudioFileStreamProperty_MagicCookieData, &cookieSize, cookieData);
         
@@ -1936,6 +1941,8 @@ static BOOL GetHardwareCodecClassDesc(UInt32 formatId, AudioClassDescription* cl
         
         if (status)
         {
+            [self unexpectedError:STKAudioPlayerErrorAudioSystemError];
+            
             return;
         }
     }
