@@ -37,6 +37,7 @@
 
 #import <Foundation/Foundation.h>
 #import <pthread.h>
+#import "STKConstants.h"
 #import "STKDataSource.h"
 #import <AudioToolbox/AudioToolbox.h>
 

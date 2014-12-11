@@ -1,5 +1,5 @@
 //
-//  STKStreamlinedConverterTest.h
+//  STKQueueMixer.h
 //  Pods
 //
 //  Created by James Gordon on 04/12/2014.
@@ -7,22 +7,14 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "STKDataSource.h"
 
 /*
- @class STKStreamlinedConverterTest
- @brief Testing streamlined audio format conversion
+ @class STKQueueMixer
  
  @discussion
  
- Create our stuff
-    Specifically - use converter audio unit to convert from aac to linear pcm
- Start loading the data
- When there is enough buffer, start the graph
- Play it!
- 
  */
-@interface STKStreamlinedConverterTest : NSObject<STKDataSourceDelegate>
+@interface STKQueueMixer : NSObject
 
 - (void)playTrackWithURL:(NSURL *)url;
 

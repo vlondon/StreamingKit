@@ -3,11 +3,27 @@
 //  StreamingKit
 //
 //  Created by James Gordon on 09/12/2014.
-//  Copyright (c) 2014 Thong Nguyen. All rights reserved.
 //
 
-#import <StreamingKit/StreamingKit.h>
+#import "STKDataSource.h"
+#import "STKQueueEntry.h"
 
-@interface STKMixableQueueEntry : STKQueueEntry
+@protocol STKMixableQueueEntryDelegate
+
+- (void)sourceShouldBeginFadeOut;
+- (void)sourceFormatDidChange;
+
+@end
+
+
+@interface STKMixableQueueEntry : STKQueueEntry<STKDataSourceDelegate>
+{
+@public
+    AudioBuffer* _pcmAudioBuffer;
+}
+
+
+- (void)beginEntryLoadWithRunLoop:(NSRunLoop *)runLoop;
+- (void)continueBuffering;
 
 @end
