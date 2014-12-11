@@ -321,8 +321,6 @@ OSStatus EntryAudioConverterCallback(AudioConverterRef inAudioConverter, UInt32*
     ioData->mNumberBuffers = 1;
     ioData->mBuffers[0] = convertInfo->audioBuffer;
     
-    NSLog(@"BUFFER SIZE: %d", (unsigned int)ioData->mBuffers[0].mDataByteSize);
-    
     if (outDataPacketDescription)
     {
         *outDataPacketDescription = convertInfo->packetDescriptions;

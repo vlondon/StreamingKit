@@ -11,7 +11,7 @@
 @protocol STKMixableQueueEntryDelegate
 
 - (void)sourceShouldBeginFadeOut;
-- (void)sourceFormatDidChange;
+- (void)sourceDidChangeToFormat:(AudioStreamBasicDescription)asbd;
 
 @end
 
@@ -22,6 +22,7 @@
     AudioBuffer* _pcmAudioBuffer;
 }
 
+@property (nonatomic) __weak id<STKMixableQueueEntryDelegate> delegate;
 
 - (void)beginEntryLoadWithRunLoop:(NSRunLoop *)runLoop;
 - (void)continueBuffering;

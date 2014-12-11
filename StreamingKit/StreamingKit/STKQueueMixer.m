@@ -7,7 +7,6 @@
 
 #import "STKAudioPlayer.h"
 #import "STKDataSource.h"
-#import "STKMixableQueueEntry.h"
 #import "STKQueueMixer.h"
 
 
@@ -134,10 +133,12 @@ const UInt64 k_framesRequiredToPlay = k_graphSampleRate * 5;
     
     // TODO: Need to set input stream format for both mixer input buses
     
+    
     AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_ElementCount, kAudioUnitScope_Input, 0, &k_busCount, sizeof(k_busCount));
     AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &k_maxFramesPerSlice, sizeof(k_maxFramesPerSlice));
-//    AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_SampleRate, kAudioUnitScope_Output, 0, &k_graphSampleRate, sizeof(k_graphSampleRate));
-//    AudioUnitSetParameter(_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, 1.0, 0);
+    AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_SampleRate, kAudioUnitScope_Output, 0, &k_graphSampleRate, sizeof(k_graphSampleRate));
+    AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &_outputStreamDescription, sizeof(_outputStreamDescription));
+    AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &_outputStreamDescription, sizeof(_outputStreamDescription));
     
     // Hook up render callback - will need to do for both bus inputs when we're mixing
     AURenderCallbackStruct callbackStruct;
@@ -159,6 +160,7 @@ const UInt64 k_framesRequiredToPlay = k_graphSampleRate * 5;
     AUGraphAddNode(_audioGraph, &_outputDescription, &_outputNode);
     AUGraphNodeInfo(_audioGraph, _outputNode, &_outputDescription, &_outputUnit);
     AudioUnitSetProperty(_outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &_outputStreamDescription, sizeof(_outputStreamDescription));
+//    AudioUnitSetProperty(_outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &_outputStreamDescription, sizeof(_outputStreamDescription));
 
     
     // TODO: Might need to set output unit's input/output values, though should be enabled and disabled by default.
@@ -211,11 +213,6 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     ioData->mBuffers[0].mDataByteSize = inNumberFrames * bytesPerFrame;
     
     if (player->_playingEntry->framesQueued > k_framesRequiredToPlay) {
-        
-        NSLog(@"Bytes per frame: %d", (unsigned int)bytesPerFrame);
-        NSLog(@"Frames queued: %d", (unsigned int)player->_playingEntry->framesQueued);
-        NSLog(@"Frames played: %d", (unsigned int)playedFrames);
-        NSLog(@"Buffer size: %d", (unsigned int)player->_playingEntry->_pcmAudioBuffer->mDataByteSize);
         
         memcpy(ioData->mBuffers[0].mData, player->_playingEntry->_pcmAudioBuffer->mData + (playedFrames * bytesPerFrame), ioData->mBuffers[0].mDataByteSize);
         player->_playingEntry->framesPlayed += inNumberFrames;
@@ -296,6 +293,11 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         [_playingEntry continueBuffering];
     }];
 }
+
+
+
+#pragma mark playback delegate
+
 
 
 
