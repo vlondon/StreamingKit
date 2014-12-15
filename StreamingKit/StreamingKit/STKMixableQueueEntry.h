@@ -20,6 +20,8 @@
 {
 @public
     AudioBuffer* _pcmAudioBuffer;
+    volatile UInt32 _pcmBufferFrameStartIndex;
+    volatile UInt32 _pcmBufferUsedFrameCount;
 }
 
 @property (nonatomic) __weak id<STKMixableQueueEntryDelegate> delegate;

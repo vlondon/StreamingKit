@@ -171,20 +171,30 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     // Take bytes from stream for specified bus and push to output.
     // If necessary, adjust mixer volume for cross-fade.
     
+    // Use array of entries and then use the bus number to index the correct entry
+    
     UInt32 bytesPerFrame = player->_playingEntry->audioStreamBasicDescription.mBytesPerFrame;
-    UInt64 playedFrames = player->_playingEntry->framesPlayed;
+//    UInt64 playedFrames = player->_playingEntry->framesPlayed;
     
     ioData->mBuffers[0].mNumberChannels = player->_playingEntry->audioStreamBasicDescription.mChannelsPerFrame;
     ioData->mBuffers[0].mDataByteSize = inNumberFrames * bytesPerFrame;
     
     if (player->_playingEntry->framesQueued > k_framesRequiredToPlay) {
         
-        memcpy(ioData->mBuffers[0].mData, player->_playingEntry->_pcmAudioBuffer->mData + (playedFrames * bytesPerFrame), ioData->mBuffers[0].mDataByteSize);
+        memcpy(ioData->mBuffers[0].mData, player->_playingEntry->_pcmAudioBuffer->mData, ioData->mBuffers[0].mDataByteSize);
         player->_playingEntry->framesPlayed += inNumberFrames;
         
-        if (player->_playingEntry->framesPlayed >= 441000) {
-            player->_playingEntry->framesPlayed = 0;
+        memmove(player->_playingEntry->_pcmAudioBuffer->mData, player->_playingEntry->_pcmAudioBuffer->mData + (inNumberFrames * bytesPerFrame), player->_playingEntry->_pcmAudioBuffer->mDataByteSize - (inNumberFrames * bytesPerFrame));
+        
+        if (player->_playingEntry->_pcmBufferFrameStartIndex > inNumberFrames) {
+            player->_playingEntry->_pcmBufferFrameStartIndex -= inNumberFrames;
         }
+        
+        if (player->_playingEntry->_pcmBufferUsedFrameCount > inNumberFrames) {
+            player->_playingEntry->_pcmBufferUsedFrameCount -= inNumberFrames;
+        }
+        
+        [player->_playingEntry continueBuffering];
         
     } else {
         memset(ioData->mBuffers[0].mData, 0, ioData->mBuffers[0].mDataByteSize);

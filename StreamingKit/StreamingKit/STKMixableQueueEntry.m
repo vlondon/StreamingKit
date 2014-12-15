@@ -21,6 +21,9 @@ const int k_readBufferSize = 64 * 1024;
     UInt8 *_readBuffer;
     AudioBufferList _pcmAudioBufferList;
     
+    pthread_mutex_t _entryMutex;
+    pthread_cond_t _playerThreadReadyCondition;
+    
 //    BOOL deallocating;
 //    NSArray* frameFilters;
 //    NSThread* playbackThread;
@@ -34,8 +37,6 @@ const int k_readBufferSize = 64 * 1024;
 //    OSSpinLock seekLock;
 //    OSSpinLock currentEntryReferencesLock;
     
-    pthread_mutex_t _entryMutex;
-    pthread_cond_t _playerThreadReadyCondition;
 //    pthread_mutex_t _mainThreadSyncCallMutex;
 //    pthread_cond_t _mainThreadSyncCallReadyCondition;
     
@@ -47,8 +48,6 @@ const int k_readBufferSize = 64 * 1024;
     UInt32 _channelsPerFrame;
     
     volatile UInt32 _pcmBufferTotalFrameCount;
-    volatile UInt32 _pcmBufferFrameStartIndex;
-    volatile UInt32 _pcmBufferUsedFrameCount;
     volatile UInt32 _pcmBufferFrameSizeInBytes;
     
     BOOL _discontinuousData;
@@ -705,6 +704,12 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
             }
         }
     }
+}
+
+
+- (void)dealloc {
+    pthread_mutex_destroy(&_entryMutex);
+    pthread_cond_destroy(&_playerThreadReadyCondition);
 }
 
 @end
