@@ -43,7 +43,6 @@ const int k_bytesPerSample = 2;
 const Float64 k_graphSampleRate = 44100.0;
 const UInt64 k_framesRequiredToPlay = k_graphSampleRate * 5;
 
-
 @implementation STKQueueMixer
 
 - (instancetype)init {
@@ -206,7 +205,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     // Take bytes from stream for specified bus and push to output.
     // If necessary, adjust mixer volume for cross-fade.
     
-    UInt32 bytesPerFrame = 4; //player->_playingEntry->audioStreamBasicDescription.mBytesPerFrame;
+    UInt32 bytesPerFrame = player->_playingEntry->audioStreamBasicDescription.mBytesPerFrame;
     UInt64 playedFrames = player->_playingEntry->framesPlayed;
     
     ioData->mBuffers[0].mNumberChannels = player->_playingEntry->audioStreamBasicDescription.mChannelsPerFrame;

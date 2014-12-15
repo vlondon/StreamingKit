@@ -61,8 +61,6 @@ const int k_readBufferSize = 64 * 1024;
 @implementation STKMixableQueueEntry
 
 
-
-
 /*
  @brief Start load of the entry and register for data-related events
  
@@ -357,6 +355,10 @@ static void AudioFileStreamPropertyListenerProc(void* clientData, AudioFileStrea
             
             self->parsedHeader = YES;
             self->audioDataOffset = offset;
+            
+            if (0 == self->audioStreamBasicDescription.mBytesPerFrame) {
+                self->audioStreamBasicDescription.mBytesPerFrame = canonicalAudioStreamBasicDescription.mBytesPerFrame;
+            }
             
             break;
         }
