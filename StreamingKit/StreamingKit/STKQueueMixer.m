@@ -132,12 +132,10 @@ const UInt64 k_framesRequiredToPlay = k_graphSampleRate * 5;
     
     // TODO: Need to set input stream format for both mixer input buses
     
-    
     AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_ElementCount, kAudioUnitScope_Input, 0, &k_busCount, sizeof(k_busCount));
     AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &k_maxFramesPerSlice, sizeof(k_maxFramesPerSlice));
     AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_SampleRate, kAudioUnitScope_Output, 0, &k_graphSampleRate, sizeof(k_graphSampleRate));
     AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &_outputStreamDescription, sizeof(_outputStreamDescription));
-    AudioUnitSetProperty(_mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &_outputStreamDescription, sizeof(_outputStreamDescription));
     
     // Hook up render callback - will need to do for both bus inputs when we're mixing
     AURenderCallbackStruct callbackStruct;
@@ -145,7 +143,6 @@ const UInt64 k_framesRequiredToPlay = k_graphSampleRate * 5;
     callbackStruct.inputProcRefCon = (__bridge void*)self;
     
     AUGraphSetNodeInputCallback(_audioGraph, _mixerNode, 0, &callbackStruct);
-    
     
     // Output to hardware
     _outputDescription = (AudioComponentDescription) {
@@ -159,43 +156,12 @@ const UInt64 k_framesRequiredToPlay = k_graphSampleRate * 5;
     AUGraphAddNode(_audioGraph, &_outputDescription, &_outputNode);
     AUGraphNodeInfo(_audioGraph, _outputNode, &_outputDescription, &_outputUnit);
     AudioUnitSetProperty(_outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &_outputStreamDescription, sizeof(_outputStreamDescription));
-//    AudioUnitSetProperty(_outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &_outputStreamDescription, sizeof(_outputStreamDescription));
-
     
-    // TODO: Might need to set output unit's input/output values, though should be enabled and disabled by default.
-    
-    AudioStreamBasicDescription srcFormat, desFormat;
-    UInt32 size = sizeof(AudioStreamBasicDescription);
-    
-    AudioUnitGetProperty(_mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &srcFormat, &size);
-    AudioUnitGetProperty(_outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &desFormat, &size);
-    
-    AUNode convertNode;
-    AudioComponentInstance convertUnit;
-    
-    AudioComponentDescription convertUnitDescription = (AudioComponentDescription)
-    {
-        .componentManufacturer = kAudioUnitManufacturer_Apple,
-        .componentType = kAudioUnitType_FormatConverter,
-        .componentSubType = kAudioUnitSubType_AUConverter,
-        .componentFlags = 0,
-        .componentFlagsMask = 0
-    };
-    
-    AUGraphAddNode(_audioGraph, &convertUnitDescription, &convertNode);
-    AUGraphNodeInfo(_audioGraph, convertNode, &_mixerDescription, &convertUnit);
-    AudioUnitSetProperty(convertUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &srcFormat, sizeof(srcFormat));
-    AudioUnitSetProperty(convertUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 0, &desFormat, sizeof(desFormat));
-    AudioUnitSetProperty(convertUnit, kAudioUnitProperty_MaximumFramesPerSlice, kAudioUnitScope_Global, 0, &maxFramesPerSlice, sizeof(maxFramesPerSlice));    
-    
-    AUGraphConnectNodeInput(_audioGraph, _mixerNode, 0, convertNode, 0);
-    AUGraphConnectNodeInput(_audioGraph, convertNode, 0, _outputNode, 0);
+    AUGraphConnectNodeInput(_audioGraph, _mixerNode, 0, _outputNode, 0);
     
     AUGraphInitialize(_audioGraph);
     AUGraphStart(_audioGraph);
 }
-
-static UInt32 maxFramesPerSlice = 4096;
 
 static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags* ioActionFlags, const AudioTimeStamp* inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList* ioData) {
     
