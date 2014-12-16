@@ -28,10 +28,7 @@
     // TODO: Will most likely need an array of these and map to the audio stream ids
     STKMixableQueueEntry *_playingEntry;
  
-    NSThread *_playbackThread;
-    NSRunLoop *_playbackThreadRunLoop;
     
-    BOOL _continueRunLoop;
 }
 
 @end
@@ -51,7 +48,6 @@ const UInt64 k_framesRequiredToPlay = k_graphSampleRate * 5;
         
         [self setupStuff];
         [self buildAudioGraph];
-        [self startPlaybackThread];
     }
     
     return self;
@@ -75,8 +71,6 @@ const UInt64 k_framesRequiredToPlay = k_graphSampleRate * 5;
 
 
 - (void)setupStuff {
-    
-    _continueRunLoop = YES;
     
     _outputStreamDescription = (AudioStreamBasicDescription)
     {
@@ -205,72 +199,6 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 
 
 
-#pragma mark Run Loop/Threading management
-
-
-- (void)startPlaybackThread {
-    _playbackThread = [[NSThread alloc] initWithTarget:self selector:@selector(internalThread) object:nil];
-    [_playbackThread start];
-}
-
-- (void)internalThread
-{
-    _playbackThreadRunLoop = [NSRunLoop currentRunLoop];
-    NSThread.currentThread.threadPriority = 1;
-    
-    [_playbackThreadRunLoop addPort:[NSPort port] forMode:NSDefaultRunLoopMode];
-    
-    while (true)
-    {
-        @autoreleasepool
-        {
-            if (![self processRunLoop])
-            {
-                break;
-            }
-        }
-        
-        NSDate* date = [[NSDate alloc] initWithTimeIntervalSinceNow:10];
-        [_playbackThreadRunLoop runMode:NSDefaultRunLoopMode beforeDate:date];
-    }
-}
-
-
-/*
- @brief Management of threaded queue entries and preparation for playback
- 
- @return YES if processing should continue, otherwise NO.
- */
-- (BOOL)processRunLoop
-{
-    return _continueRunLoop;
-}
-
--(BOOL) invokeOnPlaybackThread:(void(^)())block
-{
-    NSRunLoop* runLoop = _playbackThreadRunLoop;
-    
-    if (runLoop)
-    {
-        CFRunLoopPerformBlock([runLoop getCFRunLoop], NSRunLoopCommonModes, block);
-        CFRunLoopWakeUp([runLoop getCFRunLoop]);
-        
-        return YES;
-    }
-    
-    return NO;
-}
-
--(void) wakeupPlaybackThread
-{
-    [self invokeOnPlaybackThread:^ {
-        [self processRunLoop];
-        [_playingEntry continueBuffering];
-    }];
-}
-
-
-
 #pragma mark playback delegate
 
 
@@ -284,7 +212,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         AUGraphClose(_audioGraph);
     }
     
-    _continueRunLoop = NO;
+    // TODO: Ensure all queued entries are stopped and killed
 }
 
 @end

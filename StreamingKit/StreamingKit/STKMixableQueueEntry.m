@@ -21,13 +21,13 @@ const int k_readBufferSize = 64 * 1024;
     UInt8 *_readBuffer;
     AudioBufferList _pcmAudioBufferList;
     
+    NSThread *_playbackThread;
+    NSRunLoop *_playbackThreadRunLoop;
     pthread_mutex_t _entryMutex;
     pthread_cond_t _playerThreadReadyCondition;
     
 //    BOOL deallocating;
 //    NSArray* frameFilters;
-//    NSThread* playbackThread;
-//    NSRunLoop* playbackThreadRunLoop;
 //    NSConditionLock* threadStartedLock;
 //    NSConditionLock* threadFinishedCondLock;
     
@@ -51,6 +51,7 @@ const int k_readBufferSize = 64 * 1024;
     volatile UInt32 _pcmBufferFrameSizeInBytes;
     
     BOOL _discontinuousData;
+    BOOL _continueRunLoop;
     BOOL _waiting;
 }
 
@@ -58,6 +59,55 @@ const int k_readBufferSize = 64 * 1024;
 
 
 @implementation STKMixableQueueEntry
+
+- (instancetype)initWithDataSource:(STKDataSource *)dataSource andQueueItemId:(NSObject *)queueItemId
+{
+    self = [super initWithDataSource:dataSource andQueueItemId:queueItemId];
+    if (nil != self)
+    {
+        [self startPlaybackThread];
+        
+        _discontinuousData = NO;
+        _continueRunLoop = YES;
+        _waiting = NO;
+        
+        _bytesPerSample = 2;
+        _channelsPerFrame = 2;
+        
+        canonicalAudioStreamBasicDescription = (AudioStreamBasicDescription)
+        {
+            .mSampleRate = 44100.00,
+            .mFormatID = kAudioFormatLinearPCM,
+            .mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked,
+            .mFramesPerPacket = 1,
+            .mChannelsPerFrame = 2,
+            .mBytesPerFrame = _bytesPerSample * _channelsPerFrame,
+            .mBitsPerChannel = 8 * _bytesPerSample,
+            .mBytesPerPacket = _bytesPerSample * _channelsPerFrame
+        };
+        
+        _readBuffer = calloc(sizeof(UInt8), k_readBufferSize);
+        _pcmAudioBuffer = &_pcmAudioBufferList.mBuffers[0];
+        
+        _pcmAudioBufferList.mNumberBuffers = 1;
+        _pcmAudioBufferList.mBuffers[0].mDataByteSize = (canonicalAudioStreamBasicDescription.mSampleRate * STK_DEFAULT_PCM_BUFFER_SIZE_IN_SECONDS) * canonicalAudioStreamBasicDescription.mBytesPerFrame;
+        _pcmAudioBufferList.mBuffers[0].mData = (void*)calloc(_pcmAudioBuffer->mDataByteSize, 1);
+        _pcmAudioBufferList.mBuffers[0].mNumberChannels = 2;
+        
+        _pcmBufferFrameSizeInBytes = canonicalAudioStreamBasicDescription.mBytesPerFrame;
+        _pcmBufferTotalFrameCount = _pcmAudioBuffer->mDataByteSize / _pcmBufferFrameSizeInBytes;
+        
+        pthread_mutexattr_t attr;
+        
+        pthread_mutexattr_init(&attr);
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        
+        pthread_mutex_init(&_entryMutex, &attr);
+        pthread_cond_init(&_playerThreadReadyCondition, NULL);
+    }
+    
+    return self;
+}
 
 
 /*
@@ -70,63 +120,13 @@ const int k_readBufferSize = 64 * 1024;
  
  @return void
  */
-- (void)beginEntryLoadWithRunLoop:(NSRunLoop *)runLoop {
-    
-    _bytesPerSample = 2;
-    _channelsPerFrame = 2;
-    
-    canonicalAudioStreamBasicDescription = (AudioStreamBasicDescription)
-    {
-        .mSampleRate = 44100.00,
-        .mFormatID = kAudioFormatLinearPCM,
-        .mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked,
-        .mFramesPerPacket = 1,
-        .mChannelsPerFrame = 2,
-        .mBytesPerFrame = _bytesPerSample * _channelsPerFrame,
-        .mBitsPerChannel = 8 * _bytesPerSample,
-        .mBytesPerPacket = _bytesPerSample * _channelsPerFrame
-    };
-    
-    _readBuffer = calloc(sizeof(UInt8), k_readBufferSize);
-    _pcmAudioBuffer = &_pcmAudioBufferList.mBuffers[0];
-    
-    _pcmAudioBufferList.mNumberBuffers = 1;
-    _pcmAudioBufferList.mBuffers[0].mDataByteSize = (canonicalAudioStreamBasicDescription.mSampleRate * 10) * canonicalAudioStreamBasicDescription.mBytesPerFrame;
-    _pcmAudioBufferList.mBuffers[0].mData = (void*)calloc(_pcmAudioBuffer->mDataByteSize, 1);
-    _pcmAudioBufferList.mBuffers[0].mNumberChannels = 2;
-    
-    _pcmBufferFrameSizeInBytes = canonicalAudioStreamBasicDescription.mBytesPerFrame;
-    _pcmBufferTotalFrameCount = _pcmAudioBuffer->mDataByteSize / _pcmBufferFrameSizeInBytes;
-    
-    pthread_mutexattr_t attr;
-    
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    
-    pthread_mutex_init(&_entryMutex, &attr);
-    pthread_cond_init(&_playerThreadReadyCondition, NULL);
+- (void)beginEntryLoad {
     
     self.dataSource.delegate = self;
     
-    [self.dataSource registerForEvents:runLoop];
+    [self.dataSource registerForEvents:_playbackThreadRunLoop];
     [self.dataSource seekToOffset:0];
 }
-
-
-/*
- @breif Unblock the downloading/parsing thread
- */
-- (void)continueBuffering {
-    pthread_mutex_lock(&_entryMutex);
-    
-    if (_waiting)
-    {
-        pthread_cond_signal(&_playerThreadReadyCondition);
-    }
-    
-    pthread_mutex_unlock(&_entryMutex);
-}
-
 
 
 #pragma mark Data Source Delegate
@@ -707,7 +707,86 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
 }
 
 
-- (void)dealloc {
+#pragma mark Run Loop/Threading management
+
+
+- (void)startPlaybackThread {
+    _playbackThread = [[NSThread alloc] initWithTarget:self selector:@selector(internalThread) object:nil];
+    [_playbackThread start];
+}
+
+- (void)internalThread
+{
+    _playbackThreadRunLoop = [NSRunLoop currentRunLoop];
+    NSThread.currentThread.threadPriority = 1;
+    
+    [_playbackThreadRunLoop addPort:[NSPort port] forMode:NSDefaultRunLoopMode];
+    
+    while (true)
+    {        
+        @autoreleasepool
+        {
+            if (![self processRunLoop])
+            {
+                break;
+            }
+        }
+        
+        NSDate* date = [[NSDate alloc] initWithTimeIntervalSinceNow:10];
+        [_playbackThreadRunLoop runMode:NSDefaultRunLoopMode beforeDate:date];
+    }
+}
+
+
+/*
+ @brief Management of threaded queue entries and preparation for playback
+ 
+ @return YES if processing should continue, otherwise NO.
+ */
+- (BOOL)processRunLoop
+{
+    return _continueRunLoop;
+}
+
+-(BOOL) invokeOnPlaybackThread:(void(^)())block
+{
+    NSRunLoop* runLoop = _playbackThreadRunLoop;
+    
+    if (runLoop)
+    {
+        CFRunLoopPerformBlock([runLoop getCFRunLoop], NSRunLoopCommonModes, block);
+        CFRunLoopWakeUp([runLoop getCFRunLoop]);
+        
+        return YES;
+    }
+    
+    return NO;
+}
+
+- (void)continueBuffering
+{
+    pthread_mutex_lock(&_entryMutex);
+    
+    if (_waiting)
+    {
+        pthread_cond_signal(&_playerThreadReadyCondition);
+    }
+    
+    pthread_mutex_unlock(&_entryMutex);
+}
+
+
+-(void) wakeupPlaybackThread
+{
+    [self invokeOnPlaybackThread:^ {
+        [self processRunLoop];
+        [self continueBuffering];
+    }];
+}
+
+
+- (void)dealloc
+{
     pthread_mutex_destroy(&_entryMutex);
     pthread_cond_destroy(&_playerThreadReadyCondition);
 }

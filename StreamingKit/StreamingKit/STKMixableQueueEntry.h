@@ -11,7 +11,7 @@
 @protocol STKMixableQueueEntryDelegate
 
 - (void)sourceShouldBeginFadeOut;
-- (void)sourceDidChangeToFormat:(AudioStreamBasicDescription)asbd;
+- (void)trackIsFinsihed;
 
 @end
 
@@ -26,7 +26,8 @@
 
 @property (nonatomic) __weak id<STKMixableQueueEntryDelegate> delegate;
 
-- (void)beginEntryLoadWithRunLoop:(NSRunLoop *)runLoop;
+- (void)beginEntryLoad;
 - (void)continueBuffering;
+- (void)wakeupPlaybackThread;
 
 @end
