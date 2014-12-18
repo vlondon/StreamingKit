@@ -8,13 +8,6 @@
 #import "STKDataSource.h"
 #import "STKQueueEntry.h"
 
-@protocol STKMixableQueueEntryDelegate
-
-- (void)sourceShouldBeginFadeOut;
-- (void)trackIsFinsihed;
-
-@end
-
 
 @interface STKMixableQueueEntry : STKQueueEntry<STKDataSourceDelegate>
 {
@@ -22,12 +15,15 @@
     AudioBuffer* _pcmAudioBuffer;
     volatile UInt32 _pcmBufferFrameStartIndex;
     volatile UInt32 _pcmBufferUsedFrameCount;
+    
+    UInt32 _fadeFrom;
+    UInt32 _fadeRatio;
 }
 
-@property (nonatomic) __weak id<STKMixableQueueEntryDelegate> delegate;
-
+- (void)setFadeoutAt:(UInt32)fadeFrame withTotalDuration:(UInt32)frameCount;
 - (void)beginEntryLoad;
 - (void)continueBuffering;
 - (void)wakeupPlaybackThread;
+- (void)tidyUp;
 
 @end

@@ -55,6 +55,8 @@ const int k_readBufferSize = 64 * 1024;
     BOOL _waiting;
 }
 
+@property (nonatomic, readonly) BOOL isLoading;
+
 @end
 
 
@@ -67,6 +69,7 @@ const int k_readBufferSize = 64 * 1024;
     {
         [self startPlaybackThread];
         
+        _isLoading = NO;
         _discontinuousData = NO;
         _continueRunLoop = YES;
         _waiting = NO;
@@ -110,6 +113,13 @@ const int k_readBufferSize = 64 * 1024;
 }
 
 
+- (void)setFadeoutAt:(UInt32)fadeFrame withTotalDuration:(UInt32)frameCount
+{
+    _fadeFrom = fadeFrame;
+    _fadeRatio = 1 / (frameCount - fadeFrame);
+}
+
+
 /*
  @brief Start load of the entry and register for data-related events
  
@@ -122,10 +132,20 @@ const int k_readBufferSize = 64 * 1024;
  */
 - (void)beginEntryLoad {
     
+    if (YES == self.isLoading) {
+        return;
+    }
+    
     self.dataSource.delegate = self;
+    
+    while (nil == _playbackThreadRunLoop) {
+        [NSThread sleepForTimeInterval:0.01];
+    }
     
     [self.dataSource registerForEvents:_playbackThreadRunLoop];
     [self.dataSource seekToOffset:0];
+    
+    _isLoading = YES;
 }
 
 
@@ -198,7 +218,14 @@ const int k_readBufferSize = 64 * 1024;
 }
 
 -(void) dataSourceEof:(STKDataSource*)dataSource {
-    NSLog(@"I will probably crash; out of data");
+    
+    OSSpinLockLock(&_internalStateLock);
+    self->lastFrameQueued = self->framesQueued;
+    OSSpinLockUnlock(&_internalStateLock);
+    
+    self.dataSource.delegate = nil;
+    [self.dataSource unregisterForEvents];
+    [self.dataSource close];
 }
 
 
@@ -206,7 +233,7 @@ const int k_readBufferSize = 64 * 1024;
 #pragma mark Audio Converter management
 
 
-static BOOL GetHardwareCodecClassDesc(UInt32 formatId, AudioClassDescription* classDesc)
+BOOL GetHardwareCodecClassDesc(UInt32 formatId, AudioClassDescription* classDesc)
 {
 #if TARGET_OS_IPHONE
     UInt32 size;
@@ -333,7 +360,7 @@ OSStatus EntryAudioConverterCallback(AudioConverterRef inAudioConverter, UInt32*
 
 #pragma mark Audio stream parsing
 
-static void AudioFileStreamPropertyListenerProc(void* clientData, AudioFileStreamID audioFileStream, AudioFileStreamPropertyID	propertyId, UInt32* flags)
+void AudioFileStreamPropertyListenerProc(void* clientData, AudioFileStreamID audioFileStream, AudioFileStreamPropertyID	propertyId, UInt32* flags)
 {
     STKMixableQueueEntry *entry = (__bridge STKMixableQueueEntry *)clientData;
     [entry handlePropertyChangeForFileStream:audioFileStream fileStreamPropertyID:propertyId ioFlags:flags];
@@ -474,7 +501,7 @@ static void AudioFileStreamPropertyListenerProc(void* clientData, AudioFileStrea
 }
 
 
-static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 numberPackets, const void* inputData, AudioStreamPacketDescription* packetDescriptions)
+void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 numberPackets, const void* inputData, AudioStreamPacketDescription* packetDescriptions)
 {
     STKMixableQueueEntry* entry = (__bridge STKMixableQueueEntry*)clientData;
     [entry handleAudioPackets:inputData numberBytes:numberBytes numberPackets:numberPackets packetDescriptions:packetDescriptions];
@@ -713,6 +740,10 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
 - (void)startPlaybackThread {
     _playbackThread = [[NSThread alloc] initWithTarget:self selector:@selector(internalThread) object:nil];
     [_playbackThread start];
+    
+#ifdef DEBUG
+    _playbackThread.name = (NSString *)self.queueItemId;
+#endif
 }
 
 - (void)internalThread
@@ -784,6 +815,13 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
     }];
 }
 
+
+#pragma mark Tidy
+
+- (void)tidyUp
+{
+    
+}
 
 - (void)dealloc
 {

@@ -7,7 +7,6 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "STKMixableQueueEntry.h"
 
 /*
  @class STKQueueMixer
@@ -15,8 +14,8 @@
  @discussion
  
  */
-@interface STKQueueMixer : NSObject<STKMixableQueueEntryDelegate>
+@interface STKQueueMixer : NSObject
 
-- (void)playTrackWithURL:(NSURL *)url;
+- (void)queueURL:(NSURL *)url withID:(NSString *)trackID duration:(int)duration fadeAt:(float)time;
 
 @end
