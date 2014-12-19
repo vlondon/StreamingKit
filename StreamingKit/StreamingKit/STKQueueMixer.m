@@ -50,6 +50,7 @@ const UInt32 k_maxFramesPerSlice = 4096;
 const UInt32 k_busCount = 2;
 const UInt32 k_bytesPerSample = 2;
 const Float64 k_graphSampleRate = 44100.0;
+const Float64 k_samplesPerMs = 44.1;
 const UInt64 k_framesRequiredToPlay = k_graphSampleRate * 5;
 const int k_maxLoadingEntries = 5;
 
@@ -85,23 +86,37 @@ const int k_maxLoadingEntries = 5;
 
 - (void)queueURL:(NSURL *)url withID:(NSString *)trackID duration:(int)duration fadeAt:(float)time
 {
-//    NSLog(@"Queue URL: %@ ", url);
-    
     STKDataSource *source = [STKAudioPlayer dataSourceFromURL:url];
     STKMixableQueueEntry *mixableEntry = [[STKMixableQueueEntry alloc] initWithDataSource:source andQueueItemId:trackID];
-    [mixableEntry setFadeoutAt:time withTotalDuration:duration];
-    
-    // TODO: Note that by starting load of every queued item as it's added, we're going to use a lot of memory
-    // however, we need to cache a certain amount to ensure we're ready if user skips a track. For now though.
-    // I'm just going on a memory gorge to get the whole mixing stuff working.
-    // Might also be a good idea to have an internal "filler" sound to play if the next track hasn't buffered enough yet
-    // We're also going to need to ensure we safely stop entry thread and free resources if entry is skipped.
-    [mixableEntry beginEntryLoad];
+    [mixableEntry setFadeoutAt:(time * k_samplesPerMs) withTotalDuration:(duration * k_samplesPerMs)];
     [_mixQueue enqueue:mixableEntry];
     
     [self updateQueue];
 }
 
+
+- (BOOL)itemIsQueuedOrPlaying:(NSString *)itemID
+{
+    for (STKMixableQueueEntry *entry in _mixQueue)
+    {
+        if ([itemID isEqualToString:(NSString *)entry.queueItemId])
+        {
+            return YES;
+        }
+    }
+    
+    if ([itemID isEqualToString:(NSString *)_mixBus0.queueItemId])
+    {
+        return YES;
+    }
+    
+    if ([itemID isEqualToString:(NSString *)_mixBus1.queueItemId])
+    {
+        return YES;
+    }
+    
+    return NO;
+}
 
 
 
@@ -199,18 +214,26 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     float volume;
     if (BUS_0 == inBusNumber)
     {
-        if (BUS_0 == player->_busState || FADE_FROM_0 == player->_busState) {
-            volume = MIN(1 - fadeValue, 1);
-        } else {
-            volume = MIN(1, fadeValue);
+        if (BUS_0 == player->_busState || FADE_FROM_0 == player->_busState)
+        {
+            volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
+        }
+        else
+        {
+            error = AudioUnitGetParameter(player->_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, BUS_1, &volume);
+            volume = MIN(1.0, 1.0 - volume);
         }
     }
     else
     {
-        if (BUS_1 == player->_busState || FADE_FROM_1 == player->_busState) {
-            volume = MIN(1 - fadeValue, 1);
-        } else {
-            volume = MIN(1, fadeValue);
+        if (BUS_1 == player->_busState || FADE_FROM_1 == player->_busState)
+        {
+            volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
+        }
+        else
+        {
+            error = AudioUnitGetParameter(player->_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, BUS_0, &volume);
+            volume = MIN(1.0, 1.0 - volume);
         }
     }
     
@@ -278,13 +301,15 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 
 - (void)updateQueue
 {
-    if (nil != _mixBus0 && nil != _mixBus1) {
+    if (nil != _mixBus0 && nil != _mixBus1)
+    {
         // Bith tracks currently full, so no need to do anything
         return;
     }
     
     STKMixableQueueEntry *nextUp = _mixQueue.dequeue;
-    if (nil == nextUp) {
+    if (nil == nextUp)
+    {
         return;
     }
     
@@ -292,11 +317,17 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     [nextUp beginEntryLoad];
     
     // The first invocation of this function should assign the entry to bus 0.
+    __block BOOL exitNow = NO;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         _mixBus0 = nextUp;
-        return;
+        exitNow = YES;
     });
+    
+    if (exitNow)
+    {
+        return;
+    }
     
     if (BUS_0 == _busState)
     {

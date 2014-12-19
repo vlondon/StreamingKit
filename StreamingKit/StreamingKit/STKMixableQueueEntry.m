@@ -113,10 +113,10 @@ const int k_readBufferSize = 64 * 1024;
 }
 
 
-- (void)setFadeoutAt:(UInt32)fadeFrame withTotalDuration:(UInt32)frameCount
+- (void)setFadeoutAt:(Float64)fadeFrame withTotalDuration:(Float64)frameCount
 {
-    _fadeFrom = fadeFrame;
-    _fadeRatio = 1 / (frameCount - fadeFrame);
+    _fadeFrom = frameCount - fadeFrame;
+    _fadeRatio = 1 / (frameCount - (frameCount - fadeFrame));
 }
 
 

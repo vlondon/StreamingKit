@@ -16,11 +16,11 @@
     volatile UInt32 _pcmBufferFrameStartIndex;
     volatile UInt32 _pcmBufferUsedFrameCount;
     
-    UInt32 _fadeFrom;
-    UInt32 _fadeRatio;
+    Float64 _fadeFrom;
+    Float64 _fadeRatio;
 }
 
-- (void)setFadeoutAt:(UInt32)fadeFrame withTotalDuration:(UInt32)frameCount;
+- (void)setFadeoutAt:(Float64)fadeFrame withTotalDuration:(Float64)frameCount;
 - (void)beginEntryLoad;
 - (void)continueBuffering;
 - (void)wakeupPlaybackThread;
