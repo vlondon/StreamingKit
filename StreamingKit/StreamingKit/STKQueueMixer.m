@@ -84,7 +84,7 @@ const int k_maxLoadingEntries = 5;
 }
 
 
-- (void)queueURL:(NSURL *)url withID:(NSString *)trackID duration:(int)duration fadeAt:(float)time
+- (void)queueURL:(NSURL *)url withID:(NSString *)trackID duration:(NSInteger)duration fadeAt:(NSInteger)time
 {
     STKDataSource *source = [STKAudioPlayer dataSourceFromURL:url];
     STKMixableQueueEntry *mixableEntry = [[STKMixableQueueEntry alloc] initWithDataSource:source andQueueItemId:trackID];
@@ -281,8 +281,9 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     // Ensure bus is set to 0 volume
     AudioUnitSetParameter (_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, busNumber, 0, 0);
     
-    [entry tidyUp];
     [_mixQueue removeObject:entry];
+    [self.delegate queue:self didFinishPlayingQueueItemId:entry.queueItemId];
+    [entry tidyUp];
     
     if (0 == busNumber)
     {
