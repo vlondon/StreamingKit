@@ -84,48 +84,9 @@ const int k_maxLoadingEntries = 5;
 }
 
 
-- (void)queueURL:(NSURL *)url withID:(NSString *)trackID duration:(NSInteger)duration fadeAt:(NSInteger)time
-{
-    STKDataSource *source = [STKAudioPlayer dataSourceFromURL:url];
-    STKMixableQueueEntry *mixableEntry = [[STKMixableQueueEntry alloc] initWithDataSource:source andQueueItemId:trackID];
-    [mixableEntry setFadeoutAt:(time * k_samplesPerMs) withTotalDuration:(duration * k_samplesPerMs)];
-    [_mixQueue enqueue:mixableEntry];
-    
-    [self updateQueue];
-}
-
-
-- (BOOL)itemIsQueuedOrPlaying:(NSString *)itemID
-{
-    for (STKMixableQueueEntry *entry in _mixQueue)
-    {
-        if ([itemID isEqualToString:(NSString *)entry.queueItemId])
-        {
-            return YES;
-        }
-    }
-    
-    if ([itemID isEqualToString:(NSString *)_mixBus0.queueItemId])
-    {
-        return YES;
-    }
-    
-    if ([itemID isEqualToString:(NSString *)_mixBus1.queueItemId])
-    {
-        return YES;
-    }
-    
-    return NO;
-}
-
-
-
 #pragma mark Audio Graph magic
 
-
 /*
- We're going to try the following graph:
- 
                             +---------------+                 __
  -- BUS 0 (Now Playing) --> |               |                / //
                             | Mixer Unit    | --- lpcm ---> | ( -
@@ -217,6 +178,9 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         if (BUS_0 == player->_busState || FADE_FROM_0 == player->_busState)
         {
             volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
+            if (0 >= volume) {
+                [player trackEntry:entryForBus finishedPlayingOnBus:BUS_0];
+            }
         }
         else
         {
@@ -229,6 +193,9 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         if (BUS_1 == player->_busState || FADE_FROM_1 == player->_busState)
         {
             volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
+            if (0 >= volume) {
+                [player trackEntry:entryForBus finishedPlayingOnBus:BUS_1];
+            }
         }
         else
         {
@@ -247,7 +214,8 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     if (entryForBus->framesQueued > k_framesRequiredToPlay)
     {
         memcpy(ioData->mBuffers[0].mData, entryForBus->_pcmAudioBuffer->mData, ioData->mBuffers[0].mDataByteSize);
-        entryForBus->framesPlayed += MIN(inNumberFrames, entryForBus->_pcmBufferUsedFrameCount);  // TODO: Need to fill remainder of buffer with 0.
+//        entryForBus->framesPlayed += MIN(inNumberFrames, entryForBus->_pcmBufferUsedFrameCount);  // TODO: Need to fill remainder of buffer with 0.
+        entryForBus->framesPlayed += inNumberFrames;
         
         // TODO: This is VERY CPU intensive, using 25% CPU per thread, as opposed to the 1-2% used by the method seen in STKAudioPlayer's output render callback.
         memmove(entryForBus->_pcmAudioBuffer->mData, entryForBus->_pcmAudioBuffer->mData + (inNumberFrames * bytesPerFrame), entryForBus->_pcmAudioBuffer->mDataByteSize - (inNumberFrames * bytesPerFrame));
@@ -273,6 +241,103 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     }
     
     return error;
+}
+
+
+#pragma mark Queue management
+
+
+- (void)queueURL:(NSURL *)url withID:(NSString *)trackID duration:(NSInteger)duration fadeAt:(NSInteger)time
+{
+    STKDataSource *source = [STKAudioPlayer dataSourceFromURL:url];
+    STKMixableQueueEntry *mixableEntry = [[STKMixableQueueEntry alloc] initWithDataSource:source andQueueItemId:trackID];
+    [mixableEntry setFadeoutAt:(time * k_samplesPerMs) withTotalDuration:(duration * k_samplesPerMs)];
+    [_mixQueue enqueue:mixableEntry];
+    
+    [self updateQueue];
+}
+
+
+- (BOOL)itemIsQueuedOrPlaying:(NSString *)itemID
+{
+    for (STKMixableQueueEntry *entry in _mixQueue)
+    {
+        if ([itemID isEqualToString:(NSString *)entry.queueItemId])
+        {
+            return YES;
+        }
+    }
+    
+    if ([itemID isEqualToString:(NSString *)_mixBus0.queueItemId])
+    {
+        return YES;
+    }
+    
+    if ([itemID isEqualToString:(NSString *)_mixBus1.queueItemId])
+    {
+        return YES;
+    }
+    
+    return NO;
+}
+
+
+- (void)skipItemWithId:(NSString *)entryID
+{
+    STKMixableQueueEntry *skippedEntry = [self entryForID:entryID];
+    if (nil == skippedEntry)
+    {
+        return;
+    }
+    
+    switch (_busState)
+    {
+        case BUS_0:
+            _busState = FADE_FROM_0;
+            [skippedEntry fadeFromNow];
+            break;
+            
+        case BUS_1:
+            _busState = FADE_FROM_1;
+            [skippedEntry fadeFromNow];
+            break;
+            
+        case FADE_FROM_0:
+            [self trackEntry:_mixBus0 finishedPlayingOnBus:BUS_0];
+            [skippedEntry fadeFromNow];
+            _busState = FADE_FROM_1;
+            break;
+            
+        case FADE_FROM_1:
+            [self trackEntry:_mixBus1 finishedPlayingOnBus:BUS_1];
+            [skippedEntry fadeFromNow];
+            _busState = FADE_FROM_0;
+            break;
+            
+        default:
+            NSAssert(NO, @"Unexpected bus state found when skipping queue entry with ID %@.", entryID);
+            break;
+    }
+}
+
+
+- (STKMixableQueueEntry *)entryForID:(NSString *)entryID
+{
+    if ([entryID isEqualToString:(NSString *)_mixBus0.queueItemId]) {
+        return _mixBus0;
+    }
+
+    if ([entryID isEqualToString:(NSString *)_mixBus1.queueItemId]) {
+        return _mixBus1;
+    }
+    
+    for (STKMixableQueueEntry *entry in _mixQueue) {
+        if ([entryID isEqualToString:(NSString *)entry.queueItemId]) {
+            return entry;
+        }
+    }
+    
+    return nil;
 }
 
 
@@ -340,7 +405,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     }
     
     int queueSize = (int)_mixQueue.count;
-    for (int entryIndex = queueSize; entryIndex > MAX((queueSize - k_maxLoadingEntries), 0); --entryIndex)
+    for (int entryIndex = queueSize - 1; entryIndex > MAX((queueSize - k_maxLoadingEntries), 0); --entryIndex)
     {
         [_mixQueue[entryIndex] beginEntryLoad];
     }

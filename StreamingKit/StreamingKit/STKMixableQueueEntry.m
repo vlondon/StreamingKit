@@ -26,20 +26,6 @@ const int k_readBufferSize = 64 * 1024;
     pthread_mutex_t _entryMutex;
     pthread_cond_t _playerThreadReadyCondition;
     
-//    BOOL deallocating;
-//    NSArray* frameFilters;
-//    NSConditionLock* threadStartedLock;
-//    NSConditionLock* threadFinishedCondLock;
-    
-//    void(^stopBackBackgroundTaskBlock)();
-    
-//    int32_t seekVersion;
-//    OSSpinLock seekLock;
-//    OSSpinLock currentEntryReferencesLock;
-    
-//    pthread_mutex_t _mainThreadSyncCallMutex;
-//    pthread_cond_t _mainThreadSyncCallReadyCondition;
-    
     AudioFileStreamID _fileStream;
     AudioConverterRef _audioConverter;
     AudioStreamBasicDescription _audioConverterAudioStreamBasicDescription;
@@ -119,6 +105,13 @@ const int k_readBufferSize = 64 * 1024;
     _fadeRatio = 1 / (frameCount - (frameCount - fadeFrame));
 }
 
+- (void)fadeFromNow
+{
+    pthread_mutex_lock(&_entryMutex);
+    _fadeFrom = self->framesPlayed;
+    pthread_mutex_unlock(&_entryMutex);
+}
+
 
 /*
  @brief Start load of the entry and register for data-related events
@@ -130,8 +123,8 @@ const int k_readBufferSize = 64 * 1024;
  
  @return void
  */
-- (void)beginEntryLoad {
-    
+- (void)beginEntryLoad
+{
     if (YES == self.isLoading) {
         return;
     }
@@ -151,8 +144,8 @@ const int k_readBufferSize = 64 * 1024;
 
 #pragma mark Data Source Delegate
 
--(void) dataSourceDataAvailable:(STKDataSource*)dataSourceIn {
-    
+-(void) dataSourceDataAvailable:(STKDataSource*)dataSourceIn
+{
     OSStatus error;
     
     if (self.dataSource != dataSourceIn)
@@ -213,12 +206,13 @@ const int k_readBufferSize = 64 * 1024;
     }
 }
 
--(void) dataSourceErrorOccured:(STKDataSource*)dataSource {
+-(void) dataSourceErrorOccured:(STKDataSource*)dataSource
+{
     NSLog(@"I'm probably going to crash; data source error");
 }
 
--(void) dataSourceEof:(STKDataSource*)dataSource {
-    
+-(void) dataSourceEof:(STKDataSource*)dataSource
+{
     OSSpinLockLock(&_internalStateLock);
     self->lastFrameQueued = self->framesQueued;
     OSSpinLockUnlock(&_internalStateLock);
@@ -508,8 +502,8 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
 }
 
 
--(void) handleAudioPackets:(const void*)inputData numberBytes:(UInt32)numberBytes numberPackets:(UInt32)numberPackets packetDescriptions:(AudioStreamPacketDescription*)packetDescriptionsIn {
-    
+-(void) handleAudioPackets:(const void*)inputData numberBytes:(UInt32)numberBytes numberPackets:(UInt32)numberPackets packetDescriptions:(AudioStreamPacketDescription*)packetDescriptionsIn
+{
     if (!self->parsedHeader)
     {
         return;
@@ -737,7 +731,8 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
 #pragma mark Run Loop/Threading management
 
 
-- (void)startPlaybackThread {
+- (void)startPlaybackThread
+{
     _playbackThread = [[NSThread alloc] initWithTarget:self selector:@selector(internalThread) object:nil];
     [_playbackThread start];
     

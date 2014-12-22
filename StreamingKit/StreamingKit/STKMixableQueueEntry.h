@@ -21,6 +21,7 @@
 }
 
 - (void)setFadeoutAt:(Float64)fadeFrame withTotalDuration:(Float64)frameCount;
+- (void)fadeFromNow;
 - (void)beginEntryLoad;
 - (void)continueBuffering;
 - (void)wakeupPlaybackThread;
