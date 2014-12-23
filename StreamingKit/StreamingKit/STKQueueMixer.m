@@ -418,6 +418,38 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         return;
     }
     
+    // If we're skipping the next up track, we need to do something special...
+    STKMixableQueueEntry *nextUp = (BUS_0 == _busState) ? _mixBus1 : _mixBus0;
+    if (nextUp == skippedEntry)
+    {
+        pthread_mutex_lock(&_playerMutex);
+        STKMixableQueueEntry *newNextUp = _mixQueue.dequeue;
+        pthread_mutex_unlock(&_playerMutex);
+        
+        if (BUS_0 == _busState || FADE_FROM_0 == _busState) {
+            _mixBus1 = newNextUp;
+        } else {
+            _mixBus0 = newNextUp;
+        }
+        
+        [skippedEntry tidyUp];
+        
+        return;
+    }
+    
+    // If we're skipping something from the track, we don't need to worry too much...
+    STKMixableQueueEntry *nowPlaying = (BUS_0 == _busState) ? _mixBus0 : _mixBus1;
+    if (nowPlaying != skippedEntry)
+    {
+        pthread_mutex_lock(&_playerMutex);
+        [_mixQueue removeObject:skippedEntry];
+        [skippedEntry tidyUp];
+        pthread_mutex_unlock(&_playerMutex);
+        
+        return;
+    }
+    
+    // ...however, if we're skipping the now playing entry, we need to do something now.
     switch (_busState)
     {
         case BUS_0:
