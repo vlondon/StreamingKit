@@ -814,7 +814,14 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
 
 - (void)tidyUp
 {
+    _continueRunLoop = NO;
+    _waiting = NO;
+    _playbackThreadRunLoop = nil;
+    [_playbackThread cancel];
     
+    self.dataSource.delegate = nil;
+    [self.dataSource unregisterForEvents];
+    [self.dataSource close];
 }
 
 - (void)dealloc

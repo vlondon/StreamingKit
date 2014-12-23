@@ -66,6 +66,7 @@ const int k_maxLoadingEntries = 5;
     self = super.init;
     if (nil != self)
     {
+        self.volume = 1;
         self.mixerState = STKQueueMixerStateReady;
         
         _mixQueue = [[NSMutableArray alloc] init];
@@ -291,6 +292,12 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     AUGraphInitialize(_audioGraph);
     
     AUGraphStart(_audioGraph);
+}
+
+- (void)setVolume:(float)volume
+{
+    _volume = volume;
+    AudioUnitSetParameter(_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, _volume, 0);
 }
 
 
@@ -550,6 +557,8 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     
     _startingPlay = YES;
     _busState = BUS_0;
+    
+    self.volume = 1;
 }
 
 

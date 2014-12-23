@@ -42,6 +42,7 @@ STKQueueMixerState;
 
 @property (nonatomic, weak) id<STKQueueMixerDelegate> delegate;
 @property (nonatomic) STKQueueMixerState mixerState;
+@property (nonatomic) float volume;
 @property (nonatomic, readonly) NSArray *mixerQueue;
 
 - (BOOL)itemIsQueuedOrPlaying:(NSString *)itemID;
