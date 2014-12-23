@@ -42,9 +42,13 @@ STKQueueMixerState;
 
 @property (nonatomic, weak) id<STKQueueMixerDelegate> delegate;
 @property (nonatomic) STKQueueMixerState mixerState;
+@property (nonatomic, readonly) NSArray *mixerQueue;
 
 - (BOOL)itemIsQueuedOrPlaying:(NSString *)itemID;
+- (void)playNext:(NSURL *)url withID:(NSString *)trackID duration:(NSInteger)duration fadeAt:(NSInteger)time;
 - (void)queueURL:(NSURL *)url withID:(NSString *)trackID duration:(NSInteger)duration fadeAt:(NSInteger)time;
 - (void)skipItemWithId:(NSString *)entryID;
+- (void)stopPlayback:(BOOL)keepTrack;
+- (void)startPlayback;
 
 @end

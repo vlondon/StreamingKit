@@ -101,8 +101,10 @@ const int k_readBufferSize = 64 * 1024;
 
 - (void)setFadeoutAt:(Float64)fadeFrame withTotalDuration:(Float64)frameCount
 {
+    pthread_mutex_lock(&_entryMutex);
     _fadeFrom = frameCount - fadeFrame;
     _fadeRatio = 1 / (frameCount - (frameCount - fadeFrame));
+    pthread_mutex_unlock(&_entryMutex);
 }
 
 - (void)fadeFromNow
@@ -115,9 +117,6 @@ const int k_readBufferSize = 64 * 1024;
 
 /*
  @brief Start load of the entry and register for data-related events
- 
- TODO: If blocking the download thread for queued track causes timeouts of download,
- will need to download the entire track ASAP and then use thread blocking for just the parsing and buffering.
  
  @param runLoop on which to process entry data
  
