@@ -273,7 +273,6 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         self.mixerState = STKQueueMixerStatePaused;
     } else {
         self.mixerState = STKQueueMixerStateStopped;
-        
         [self clearQueue];
     }
 }
@@ -287,6 +286,9 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     if (graphIsRunning) {
         return;
     }
+    
+    AUGraphUninitialize(_audioGraph);
+    AUGraphInitialize(_audioGraph);
     
     AUGraphStart(_audioGraph);
 }
