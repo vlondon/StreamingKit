@@ -24,7 +24,7 @@ STKQueueMixerState;
 @protocol STKQueueMixerDelegate <NSObject>
 
 /// Raised when an item has started playing
-//-(void) queue:(STKQueueMixer *)mixer didStartPlayingQueueItemId:(NSObject *)queueItemId;
+-(void) queue:(STKQueueMixer *)mixer didStartPlayingQueueItemId:(NSObject *)queueItemId;
 -(void) queue:(STKQueueMixer *)mixer didSkipItemWithId:(NSObject *)queueItemId;
 -(void) queue:(STKQueueMixer *)mixer didFinishPlayingQueueItemId:(NSObject *)queueItemId;
 -(void) queue:(STKQueueMixer *)mixer didChangeToState:(STKQueueMixerState)state from:(STKQueueMixerState)previousState;
@@ -34,9 +34,6 @@ STKQueueMixerState;
 
 /*
  @class STKQueueMixer
- 
- @discussion
- 
  */
 @interface STKQueueMixer : NSObject
 

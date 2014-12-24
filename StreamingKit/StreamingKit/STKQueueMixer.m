@@ -270,17 +270,23 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 {
     AUGraphStop(_audioGraph);
     
+    STKQueueMixerState oldState = self.mixerState;
+    
     if (keepTrack) {
         self.mixerState = STKQueueMixerStatePaused;
     } else {
         self.mixerState = STKQueueMixerStateStopped;
         [self clearQueue];
     }
+    
+    [self.delegate queue:self didChangeToState:self.mixerState from:oldState];
 }
 
 - (void)startPlayback
 {
+    STKQueueMixerState oldState = self.mixerState;
     self.mixerState = STKQueueMixerStatePlaying;
+    [self.delegate queue:self didChangeToState:self.mixerState from:oldState];
     
     Boolean graphIsRunning;
     AUGraphIsRunning(_audioGraph, &graphIsRunning);
@@ -388,7 +394,11 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 
 - (BOOL)itemIsQueuedOrPlaying:(NSString *)itemID
 {
-    for (STKMixableQueueEntry *entry in _mixQueue)
+    pthread_mutex_lock(&_playerMutex);
+    NSArray *currentQueue = _mixQueue.copy;
+    pthread_mutex_unlock(&_playerMutex);
+    
+    for (STKMixableQueueEntry *entry in currentQueue)
     {
         if ([itemID isEqualToString:(NSString *)entry.queueItemId])
         {
@@ -418,8 +428,10 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         return;
     }
     
-    // If we're skipping the next up track, we need to do something special...
     STKMixableQueueEntry *nextUp = (BUS_0 == _busState) ? _mixBus1 : _mixBus0;
+    STKMixableQueueEntry *nowPlaying = (BUS_0 == _busState) ? _mixBus0 : _mixBus1;
+    
+    // If we're skipping the next up track, we need to do something special...
     if (nextUp == skippedEntry)
     {
         pthread_mutex_lock(&_playerMutex);
@@ -433,14 +445,10 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         }
         
         [skippedEntry tidyUp];
-        
-        return;
     }
-    
-    // If we're skipping something from the track, we don't need to worry too much...
-    STKMixableQueueEntry *nowPlaying = (BUS_0 == _busState) ? _mixBus0 : _mixBus1;
-    if (nowPlaying != skippedEntry)
+    else if (nowPlaying != skippedEntry)
     {
+        // If we're skipping something from the track, we don't need to worry too much...
         pthread_mutex_lock(&_playerMutex);
         [_mixQueue removeObject:skippedEntry];
         [skippedEntry tidyUp];
@@ -448,36 +456,40 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         
         return;
     }
-    
-    // ...however, if we're skipping the now playing entry, we need to do something now.
-    switch (_busState)
+    else
     {
-        case BUS_0:
-            _busState = FADE_FROM_0;
-            [skippedEntry fadeFromNow];
-            break;
-            
-        case BUS_1:
-            _busState = FADE_FROM_1;
-            [skippedEntry fadeFromNow];
-            break;
-            
-        case FADE_FROM_0:
-            [self trackEntry:_mixBus0 finishedPlayingOnBus:BUS_0];
-            [skippedEntry fadeFromNow];
-            _busState = FADE_FROM_1;
-            break;
-            
-        case FADE_FROM_1:
-            [self trackEntry:_mixBus1 finishedPlayingOnBus:BUS_1];
-            [skippedEntry fadeFromNow];
-            _busState = FADE_FROM_0;
-            break;
-            
-        default:
-            NSAssert(NO, @"Unexpected bus state found when skipping queue entry with ID %@.", entryID);
-            break;
+        // ...however, if we're skipping the now playing entry, we need to do something now.
+        switch (_busState)
+        {
+            case BUS_0:
+                _busState = FADE_FROM_0;
+                [skippedEntry fadeFromNow];
+                break;
+                
+            case BUS_1:
+                _busState = FADE_FROM_1;
+                [skippedEntry fadeFromNow];
+                break;
+                
+            case FADE_FROM_0:
+                [self trackEntry:_mixBus0 finishedPlayingOnBus:BUS_0];
+                [skippedEntry fadeFromNow];
+                _busState = FADE_FROM_1;
+                break;
+                
+            case FADE_FROM_1:
+                [self trackEntry:_mixBus1 finishedPlayingOnBus:BUS_1];
+                [skippedEntry fadeFromNow];
+                _busState = FADE_FROM_0;
+                break;
+                
+            default:
+                NSAssert(NO, @"Unexpected bus state found when skipping queue entry with ID %@.", entryID);
+                break;
+        }
     }
+    
+    [self.delegate queue:self didSkipItemWithId:skippedEntry.queueItemId];
 }
 
 
@@ -510,17 +522,21 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     [self.delegate queue:self didFinishPlayingQueueItemId:entry.queueItemId];
     [entry tidyUp];
     
+    STKMixableQueueEntry *nowPlaying;
     if (0 == busNumber)
     {
         _busState = BUS_1;
         _mixBus0 = nil;
+        nowPlaying = _mixBus1;
     }
     else
     {
         _busState = BUS_0;
         _mixBus1 = nil;
+        nowPlaying = _mixBus0;
     }
     
+    [self.delegate queue:self didStartPlayingQueueItemId:nowPlaying];
     [self updateQueue];
 }
 
