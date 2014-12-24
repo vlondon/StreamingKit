@@ -128,6 +128,7 @@ const int k_readBufferSize = 64 * 1024;
         return;
     }
     
+    _isLoading = YES;
     self.dataSource.delegate = self;
     
     while (nil == _playbackThreadRunLoop) {
@@ -136,8 +137,6 @@ const int k_readBufferSize = 64 * 1024;
     
     [self.dataSource registerForEvents:_playbackThreadRunLoop];
     [self.dataSource seekToOffset:0];
-    
-    _isLoading = YES;
 }
 
 
