@@ -612,13 +612,13 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 
 - (void)dealloc
 {
+    [self clearQueue];
+    
     if (_audioGraph)
     {
         AUGraphStop(_audioGraph);
         AUGraphClose(_audioGraph);
     }
-    
-    [self clearQueue];
     
     pthread_mutex_destroy(&_playerMutex);
 }
