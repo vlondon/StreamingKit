@@ -375,6 +375,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     [_mixQueue enqueue:mixableEntry];
     
     [self updateQueue];
+    [self loadTracks];
     
     if (STKQueueMixerStatePlaying != self.mixerState) {
         [self startPlayback];
@@ -490,6 +491,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     }
     
     [self.delegate queue:self didSkipItemWithId:skippedEntry.queueItemId];
+    [self loadTracks];
 }
 
 
@@ -538,6 +540,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     
     [self.delegate queue:self didStartPlayingQueueItemId:nowPlaying];
     [self updateQueue];
+    [self loadTracks];
 }
 
 
@@ -573,7 +576,11 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     {
         _mixBus0 = nextUp;
     }
-    
+}
+
+
+- (void)loadTracks
+{
     int queueSize = (int)_mixQueue.count;
     for (int entryIndex = queueSize - 1; entryIndex > MAX((queueSize - k_maxLoadingEntries), 0); --entryIndex)
     {

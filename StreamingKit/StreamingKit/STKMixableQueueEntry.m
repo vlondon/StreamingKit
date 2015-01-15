@@ -577,24 +577,10 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
                     break;
                 }
                 
-//                if  (disposeWasRequested
-//                     || self.internalState == STKAudioPlayerInternalStateStopped
-//                     || self.internalState == STKAudioPlayerInternalStateDisposed
-//                     || self.internalState == STKAudioPlayerInternalStatePendingNext)
-//                {
-//                    pthread_mutex_unlock(&_entryMutex);
-//                    
-//                    return;
-//                }
-                
-//                if (seekToTimeWasRequested && [self calculatedBitRate] > 0.0)
-//                {
-//                    pthread_mutex_unlock(&_entryMutex);
-//                    
-//                    [self wakeupPlaybackThread];
-//                    
-//                    return;
-//                }
+                if (NO == _continueRunLoop) {
+                    pthread_mutex_unlock(&_entryMutex);
+                    return;
+                }
                 
                 _waiting = YES;
                 
@@ -732,11 +718,9 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
 - (void)startPlaybackThread
 {
     _playbackThread = [[NSThread alloc] initWithTarget:self selector:@selector(internalThread) object:nil];
-    [_playbackThread start];
+    _playbackThread.name = [NSString stringWithFormat:@"Queue item %@", self.queueItemId];
     
-#ifdef DEBUG
-    _playbackThread.name = (NSString *)self.queueItemId;
-#endif
+    [_playbackThread start];
 }
 
 - (void)internalThread
@@ -759,6 +743,8 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
         NSDate* date = [[NSDate alloc] initWithTimeIntervalSinceNow:10];
         [_playbackThreadRunLoop runMode:NSDefaultRunLoopMode beforeDate:date];
     }
+    
+    _playbackThreadRunLoop = nil;
 }
 
 
@@ -767,7 +753,7 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
  
  @return YES if processing should continue, otherwise NO.
  */
-- (BOOL)processRunLoop
+-(BOOL) processRunLoop
 {
     return _continueRunLoop;
 }
@@ -787,7 +773,7 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
     return NO;
 }
 
-- (void)continueBuffering
+-(void) continueBuffering
 {
     pthread_mutex_lock(&_entryMutex);
     
@@ -799,13 +785,17 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
     pthread_mutex_unlock(&_entryMutex);
 }
 
-
 -(void) wakeupPlaybackThread
 {
     [self invokeOnPlaybackThread:^ {
-        [self processRunLoop];
         [self continueBuffering];
     }];
+}
+
+-(void) stopThread
+{
+    _continueRunLoop = NO;
+    pthread_cond_signal(&_playerThreadReadyCondition);
 }
 
 
@@ -813,14 +803,12 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
 
 - (void)tidyUp
 {
-    _continueRunLoop = NO;
-    _waiting = NO;
-    _playbackThreadRunLoop = nil;
-    [_playbackThread cancel];
-    
     self.dataSource.delegate = nil;
+    
     [self.dataSource unregisterForEvents];
     [self.dataSource close];
+    
+    [self stopThread];
 }
 
 - (void)dealloc

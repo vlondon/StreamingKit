@@ -1,11 +1,11 @@
 Pod::Spec.new do |s|
   s.name         = "StreamingKit"
-  s.version      = "0.0.10"
+  s.version      = "0.0.11"
   s.summary      = "A fast and extensible audio streamer for iOS and OSX with support for gapless playback and custom (non-HTTP) sources."
   s.homepage     = "https://github.com/tumtumtum/StreamingKit/"
   s.license      = 'MIT'
   s.author       = { "Thong Nguyen" => "tumtumtum@gmail.com" }
-  s.source       = { :git => "https://github.com/GlobalRadio/StreamingKit.git", :tag => "avo_0.0.10"}
+  s.source       = { :git => "https://github.com/GlobalRadio/StreamingKit.git", :tag => "avo_0.0.11"}
   s.platform     = :ios
   s.requires_arc = true
   s.source_files = 'StreamingKit/StreamingKit/*.{h,m}'
