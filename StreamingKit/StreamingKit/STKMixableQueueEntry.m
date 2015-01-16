@@ -124,19 +124,23 @@ const int k_readBufferSize = 64 * 1024;
  */
 - (void)beginEntryLoad
 {
-    if (YES == self.isLoading) {
+    if (YES == self.isLoading)
+    {
         return;
     }
     
     _isLoading = YES;
     self.dataSource.delegate = self;
     
-    while (nil == _playbackThreadRunLoop) {
+    while (nil == _playbackThreadRunLoop)
+    {
         [NSThread sleepForTimeInterval:0.01];
     }
     
     [self.dataSource registerForEvents:_playbackThreadRunLoop];
-    [self.dataSource seekToOffset:0];
+    [self invokeOnPlaybackThread:^ {
+        [self.dataSource seekToOffset:0];
+    }];
 }
 
 
