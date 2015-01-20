@@ -184,45 +184,33 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     ioData->mBuffers[0].mDataByteSize = inNumberFrames * bytesPerFrame;
     
     float fadeValue = (entryForBus->framesPlayed - entryForBus->_fadeFrom) * entryForBus->_fadeRatio;
-    float volume;
+    float volume = 0;
     if (BUS_0 == inBusNumber)
     {
-        switch (player->_busState) {
-            case BUS_0:
-            case FADE_FROM_0:
-                volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
-                if (0 >= volume) {
-                    [player trackEntry:entryForBus finishedPlayingOnBus:BUS_0];
-                }
-                break;
-                
-            case FADE_FROM_1:
-                volume = 1;
-                break;
-                
-            default:
-                volume = 0;
-                break;
+        if (BUS_0 == player->_busState || FADE_FROM_0 == player->_busState)
+        {
+            volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
+            if (0 >= volume) {
+                [player trackEntry:entryForBus finishedPlayingOnBus:BUS_0];
+            }
+        }
+        else if (FADE_FROM_1 == player->_busState)
+        {
+            volume = 1;
         }
     }
     else
     {
-        switch (player->_busState) {
-            case BUS_1:
-            case FADE_FROM_1:
-                volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
-                if (0 >= volume) {
-                    [player trackEntry:entryForBus finishedPlayingOnBus:BUS_1];
-                }
-                break;
-                
-            case FADE_FROM_0:
-                volume = 1;
-                break;
-                
-            default:
-                volume = 0;
-                break;
+        if (BUS_1 == player->_busState || FADE_FROM_1 == player->_busState)
+        {
+            volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
+            if (0 >= volume) {
+                [player trackEntry:entryForBus finishedPlayingOnBus:BUS_1];
+            }
+        }
+        else if (FADE_FROM_0 == player->_busState)
+        {
+            volume = 1;
         }
     }
     
