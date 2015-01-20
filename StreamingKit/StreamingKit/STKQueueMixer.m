@@ -187,32 +187,42 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     float volume;
     if (BUS_0 == inBusNumber)
     {
-        if (BUS_0 == player->_busState || FADE_FROM_0 == player->_busState)
-        {
-            volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
-            if (0 >= volume) {
-                [player trackEntry:entryForBus finishedPlayingOnBus:BUS_0];
-            }
-        }
-        else
-        {
-            error = AudioUnitGetParameter(player->_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, BUS_1, &volume);
-            volume = MIN(1.0, 1.0 - volume);
+        switch (player->_busState) {
+            case BUS_0:
+            case FADE_FROM_0:
+                volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
+                if (0 >= volume) {
+                    [player trackEntry:entryForBus finishedPlayingOnBus:BUS_0];
+                }
+                break;
+                
+            case FADE_FROM_1:
+                volume = 1;
+                break;
+                
+            default:
+                volume = 0;
+                break;
         }
     }
     else
     {
-        if (BUS_1 == player->_busState || FADE_FROM_1 == player->_busState)
-        {
-            volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
-            if (0 >= volume) {
-                [player trackEntry:entryForBus finishedPlayingOnBus:BUS_1];
-            }
-        }
-        else
-        {
-            error = AudioUnitGetParameter(player->_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, BUS_0, &volume);
-            volume = MIN(1.0, 1.0 - volume);
+        switch (player->_busState) {
+            case BUS_1:
+            case FADE_FROM_1:
+                volume = MAX(MIN(1.0 - fadeValue, 1.0), 0);
+                if (0 >= volume) {
+                    [player trackEntry:entryForBus finishedPlayingOnBus:BUS_1];
+                }
+                break;
+                
+            case FADE_FROM_0:
+                volume = 1;
+                break;
+                
+            default:
+                volume = 0;
+                break;
         }
     }
     
@@ -221,7 +231,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         player->_busState = (player->_busState == BUS_0) ? FADE_FROM_0 : FADE_FROM_1;
     }
     
-    error = AudioUnitSetParameter (player->_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, inBusNumber, volume, 0);
+    error = AudioUnitSetParameter(player->_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, inBusNumber, volume, 0);
     
     if (entryForBus->framesQueued > k_framesRequiredToPlay)
     {
