@@ -53,8 +53,6 @@ const int k_readBufferSize = 64 * 1024;
     self = [super initWithDataSource:dataSource andQueueItemId:queueItemId];
     if (nil != self)
     {
-        [self startPlaybackThread];
-        
         _isLoading = NO;
         _discontinuousData = NO;
         _continueRunLoop = YES;
@@ -86,13 +84,7 @@ const int k_readBufferSize = 64 * 1024;
         _pcmBufferFrameSizeInBytes = canonicalAudioStreamBasicDescription.mBytesPerFrame;
         _pcmBufferTotalFrameCount = _pcmAudioBuffer->mDataByteSize / _pcmBufferFrameSizeInBytes;
         
-        pthread_mutexattr_t attr;
-        
-        pthread_mutexattr_init(&attr);
-        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-        
-        pthread_mutex_init(&_entryMutex, &attr);
-        pthread_cond_init(&_playerThreadReadyCondition, NULL);
+        [self startPlaybackThread];
     }
     
     return self;
@@ -721,6 +713,14 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
 
 - (void)startPlaybackThread
 {
+    pthread_mutexattr_t attr;
+    
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    
+    pthread_mutex_init(&_entryMutex, &attr);
+    pthread_cond_init(&_playerThreadReadyCondition, NULL);
+    
     _playbackThread = [[NSThread alloc] initWithTarget:self selector:@selector(internalThread) object:nil];
     _playbackThread.name = [NSString stringWithFormat:@"Queue item %@", self.queueItemId];
     
@@ -729,9 +729,13 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
 
 - (void)internalThread
 {
-    _playbackThreadRunLoop = [NSRunLoop currentRunLoop];
-    NSThread.currentThread.threadPriority = 1;
+    while (nil == _playbackThreadRunLoop) {
+        pthread_mutex_lock(&_entryMutex);
+        _playbackThreadRunLoop = [NSRunLoop currentRunLoop];
+        pthread_mutex_unlock(&_entryMutex);
+    }
     
+    NSThread.currentThread.threadPriority = 1;
     [_playbackThreadRunLoop addPort:[NSPort port] forMode:NSDefaultRunLoopMode];
     
     while (true)
