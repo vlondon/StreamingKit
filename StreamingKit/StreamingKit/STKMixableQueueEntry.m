@@ -33,12 +33,8 @@ const int k_readBufferSize = 64 * 1024;
     UInt32 _bytesPerSample;
     UInt32 _channelsPerFrame;
     
-    volatile UInt32 _pcmBufferTotalFrameCount;
-    volatile UInt32 _pcmBufferFrameSizeInBytes;
-    
     BOOL _discontinuousData;
     BOOL _continueRunLoop;
-    BOOL _waiting;
 }
 
 @property (nonatomic, readonly) BOOL isLoading;

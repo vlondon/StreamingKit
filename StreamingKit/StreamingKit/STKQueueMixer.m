@@ -167,6 +167,9 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     OSStatus error = 0;
     STKQueueMixer *player = (__bridge STKQueueMixer *)inRefCon;
     
+    
+    // Determining what bus we're pulling from and what the volume should be.
+    
     if (inBusNumber != player->_busState && FADE_FROM_0 > player->_busState) {
         return error;
     }
@@ -221,24 +224,65 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     
     error = AudioUnitSetParameter(player->_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, inBusNumber, volume, 0);
     
+    
+    
+    // Push data to hardware and update where to place data
+    
+    
+    AudioBuffer* audioBuffer = entryForBus->_pcmAudioBuffer;
+    UInt32 totalFramesCopied = 0;
+    UInt32 frameSizeInBytes = entryForBus->_pcmBufferFrameSizeInBytes;
+    UInt32 used = entryForBus->_pcmBufferUsedFrameCount;
+    UInt32 start = entryForBus->_pcmBufferFrameStartIndex;
+    UInt32 end = (entryForBus->_pcmBufferFrameStartIndex + entryForBus->_pcmBufferUsedFrameCount) % entryForBus->_pcmBufferTotalFrameCount;
+    
     if (entryForBus->framesQueued > k_framesRequiredToPlay)
     {
-        memcpy(ioData->mBuffers[0].mData, entryForBus->_pcmAudioBuffer->mData, ioData->mBuffers[0].mDataByteSize);
-        
-        // TODO: Need to fill remainder of buffer with 0.
-        // TODO: When using buffer fill like STKAudioPlayer, use below for setting framesPlayed instead of simply incrementing by inNumberFrames
-//        entryForBus->framesPlayed += MIN(inNumberFrames, entryForBus->_pcmBufferUsedFrameCount);
-        entryForBus->framesPlayed += inNumberFrames;
-        
-        // TODO: This is VERY CPU intensive, using 25% CPU per thread, as opposed to the 1-2% used by the method seen in STKAudioPlayer's output render callback.
-        memmove(entryForBus->_pcmAudioBuffer->mData, entryForBus->_pcmAudioBuffer->mData + (inNumberFrames * bytesPerFrame), entryForBus->_pcmAudioBuffer->mDataByteSize - (inNumberFrames * bytesPerFrame));
-        
-        if (entryForBus->_pcmBufferFrameStartIndex > inNumberFrames) {
-            entryForBus->_pcmBufferFrameStartIndex -= inNumberFrames;
+        if (end > start)
+        {
+            UInt32 framesToCopy = MIN(inNumberFrames, used);
+            
+            ioData->mBuffers[0].mNumberChannels = 2;
+            ioData->mBuffers[0].mDataByteSize = frameSizeInBytes * framesToCopy;
+            
+            memcpy(ioData->mBuffers[0].mData, audioBuffer->mData + (start * frameSizeInBytes), ioData->mBuffers[0].mDataByteSize);
+            totalFramesCopied = framesToCopy;
+            
+            OSSpinLockLock(&entryForBus->spinLock);
+            entryForBus->_pcmBufferFrameStartIndex = (entryForBus->_pcmBufferFrameStartIndex + totalFramesCopied) % entryForBus->_pcmBufferTotalFrameCount;
+            entryForBus->_pcmBufferUsedFrameCount -= totalFramesCopied;
+            entryForBus->framesPlayed += MIN(inNumberFrames, entryForBus->_pcmBufferUsedFrameCount);
+            OSSpinLockUnlock(&entryForBus->spinLock);
         }
-        
-        if (entryForBus->_pcmBufferUsedFrameCount > inNumberFrames) {
-            entryForBus->_pcmBufferUsedFrameCount -= inNumberFrames;
+        else
+        {
+            UInt32 framesToCopy = MIN(inNumberFrames, entryForBus->_pcmBufferTotalFrameCount - start);
+            
+            ioData->mBuffers[0].mNumberChannels = 2;
+            ioData->mBuffers[0].mDataByteSize = frameSizeInBytes * framesToCopy;
+            
+            memcpy(ioData->mBuffers[0].mData, audioBuffer->mData + (start * frameSizeInBytes), ioData->mBuffers[0].mDataByteSize);
+
+            UInt32 moreFramesToCopy = 0;
+            UInt32 delta = inNumberFrames - framesToCopy;
+            
+            if (delta > 0)
+            {
+                moreFramesToCopy = MIN(delta, end);
+                
+                ioData->mBuffers[0].mNumberChannels = 2;
+                ioData->mBuffers[0].mDataByteSize += frameSizeInBytes * moreFramesToCopy;
+                
+                memcpy(ioData->mBuffers[0].mData + (framesToCopy * frameSizeInBytes), audioBuffer->mData, frameSizeInBytes * moreFramesToCopy);
+            }
+            
+            totalFramesCopied = framesToCopy + moreFramesToCopy;
+            
+            OSSpinLockLock(&entryForBus->spinLock);
+            entryForBus->_pcmBufferFrameStartIndex = (entryForBus->_pcmBufferFrameStartIndex + totalFramesCopied) % entryForBus->_pcmBufferTotalFrameCount;
+            entryForBus->_pcmBufferUsedFrameCount -= totalFramesCopied;
+            entryForBus->framesPlayed += MIN(inNumberFrames, entryForBus->_pcmBufferUsedFrameCount);
+            OSSpinLockUnlock(&entryForBus->spinLock);
         }
         
         [entryForBus continueBuffering];
@@ -246,7 +290,14 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     else
     {
         memset(ioData->mBuffers[0].mData, 0, ioData->mBuffers[0].mDataByteSize);
+        return error;
     }
+    
+    if (totalFramesCopied < inNumberFrames)
+    {
+        UInt32 delta = inNumberFrames - totalFramesCopied;
+        memset(ioData->mBuffers[0].mData + (totalFramesCopied * frameSizeInBytes), 0, delta * frameSizeInBytes);
+    }    
     
     if (entryForBus->framesPlayed == entryForBus->lastFrameQueued)
     {

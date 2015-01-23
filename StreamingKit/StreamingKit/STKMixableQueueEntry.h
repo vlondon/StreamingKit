@@ -13,11 +13,16 @@
 {
 @public
     AudioBuffer* _pcmAudioBuffer;
+    
     volatile UInt32 _pcmBufferFrameStartIndex;
     volatile UInt32 _pcmBufferUsedFrameCount;
+    volatile UInt32 _pcmBufferTotalFrameCount;
+    volatile UInt32 _pcmBufferFrameSizeInBytes;
     
     Float64 _fadeFrom;
     Float64 _fadeRatio;
+    
+    BOOL _waiting;
 }
 
 - (void)setFadeoutAt:(Float64)fadeFrame withTotalDuration:(Float64)frameCount;
