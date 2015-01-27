@@ -87,11 +87,13 @@ const int k_readBufferSize = 64 * 1024;
 }
 
 
-- (void)setFadeoutAt:(Float64)fadeFrame withTotalDuration:(Float64)frameCount
+- (void)setFadeoutAt:(Float64)fadeFrame overDuration:(Float64)fadeForFrames trackDuration:(Float64)totalFrames
 {
+    NSAssert(0 != fadeForFrames, @"Parameter fadeForFrames is 0. This is causing a divide by zero.");
+    
     pthread_mutex_lock(&_entryMutex);
-    _fadeFrom = frameCount - fadeFrame;
-    _fadeRatio = 1 / (frameCount - (frameCount - fadeFrame));
+    _fadeFrom = totalFrames - fadeFrame;
+    _fadeRatio = 1 / fadeForFrames;
     pthread_mutex_unlock(&_entryMutex);
 }
 

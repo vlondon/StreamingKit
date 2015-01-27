@@ -25,7 +25,7 @@
     BOOL _waiting;
 }
 
-- (void)setFadeoutAt:(Float64)fadeFrame withTotalDuration:(Float64)frameCount;
+- (void)setFadeoutAt:(Float64)fadeFrame overDuration:(Float64)fadeForFrames trackDuration:(Float64)totalFrames;
 - (void)fadeFromNow;
 - (void)beginEntryLoad;
 - (void)continueBuffering;

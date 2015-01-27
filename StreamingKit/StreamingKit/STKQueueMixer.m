@@ -224,11 +224,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     
     error = AudioUnitSetParameter(player->_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, inBusNumber, volume, 0);
     
-    
-    
-    // Push data to hardware and update where to place data
-    
-    
+    // Push data to hardware and update where to place data    
     AudioBuffer* audioBuffer = entryForBus->_pcmAudioBuffer;
     UInt32 totalFramesCopied = 0;
     UInt32 frameSizeInBytes = entryForBus->_pcmBufferFrameSizeInBytes;
@@ -373,14 +369,15 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
  
  @param url to play
  @param trackID to use for identifying entry
- @param duration of the source in ms
- @param fadeAt time before end of file to start fade in ms.
+ @param totalTime of the tack
+ @param crossfade time before end of file to start fade in ms.
+ @param fadeFor time in ms
  
  @return void
  */
-- (void)playNext:(NSURL *)url withID:(NSString *)trackID duration:(NSInteger)duration fadeAt:(NSInteger)time
+- (void)playNext:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor
 {
-    STKMixableQueueEntry *pushingEntry = [self entryForURL:url withID:trackID duration:duration fadeAt:time];
+    STKMixableQueueEntry *pushingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
     [pushingEntry beginEntryLoad];
     
     STKMixableQueueEntry *bargedEntry;
@@ -413,14 +410,15 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
  
  @param url to play
  @param trackID to use for identifying entry
- @param duration of the source in ms
- @param fadeAt time before end of file to start fade in ms.
+ @param totalTime of the tack
+ @param crossfade time before end of file to start fade in ms.
+ @param fadeFor time in ms
  
  @return void
  */
-- (void)queueURL:(NSURL *)url withID:(NSString *)trackID duration:(NSInteger)duration fadeAt:(NSInteger)time
+- (void)queueURL:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor
 {
-    STKMixableQueueEntry *mixableEntry = [self entryForURL:url withID:trackID duration:duration fadeAt:time];
+    STKMixableQueueEntry *mixableEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
     [_mixQueue enqueue:mixableEntry];
     
     [self updateQueue];
@@ -432,11 +430,11 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 }
 
 
-- (STKMixableQueueEntry *)entryForURL:(NSURL *)url withID:(NSString *)trackID duration:(NSInteger)duration fadeAt:(NSInteger)time
+- (STKMixableQueueEntry *)entryForURL:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor
 {
     STKDataSource *source = [STKAudioPlayer dataSourceFromURL:url];
     STKMixableQueueEntry *mixableEntry = [[STKMixableQueueEntry alloc] initWithDataSource:source andQueueItemId:trackID];
-    [mixableEntry setFadeoutAt:(time * k_samplesPerMs) withTotalDuration:(duration * k_samplesPerMs)];
+    [mixableEntry setFadeoutAt:(crossfade * k_samplesPerMs) overDuration:(fadeFor * k_samplesPerMs) trackDuration:(totalTime * k_samplesPerMs)];
     
     return mixableEntry;
 }
