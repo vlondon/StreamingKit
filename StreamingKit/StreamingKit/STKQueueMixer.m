@@ -398,10 +398,6 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         [_mixQueue addObject:bargedEntry];
         pthread_mutex_unlock(&_playerMutex);
     }
-    
-    if (STKQueueMixerStatePlaying != self.mixerState) {
-        [self startPlayback];
-    }
 }
 
 
