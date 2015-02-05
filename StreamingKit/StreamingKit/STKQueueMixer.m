@@ -420,7 +420,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     [self updateQueue];
     [self loadTracks];
     
-    if (STKQueueMixerStatePlaying != self.mixerState) {
+    if (!(self.mixerState & STKQueueMixerStateRunning)) {
         [self startPlayback];
     }
 }

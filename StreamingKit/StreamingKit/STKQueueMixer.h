@@ -10,11 +10,12 @@
 
 typedef enum
 {
-    STKQueueMixerStateReady,
-    STKQueueMixerStatePlaying,
-    STKQueueMixerStatePaused,
-    STKQueueMixerStateStopped,
-    STKQueueMixerStateError,
+    STKQueueMixerStateReady = 0,
+    STKQueueMixerStateRunning = 1,
+    STKQueueMixerStatePlaying = 2 | STKQueueMixerStateRunning,
+    STKQueueMixerStatePaused = 4 | STKQueueMixerStateRunning,
+    STKQueueMixerStateStopped = 8,
+    STKQueueMixerStateError = 16,
 }
 STKQueueMixerState;
 
