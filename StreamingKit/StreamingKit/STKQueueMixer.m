@@ -667,7 +667,9 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     if (_audioGraph)
     {
         AUGraphStop(_audioGraph);
+        AUGraphUninitialize(_audioGraph);
         AUGraphClose(_audioGraph);
+        DisposeAUGraph(_audioGraph);
     }
     
     pthread_mutex_destroy(&_playerMutex);

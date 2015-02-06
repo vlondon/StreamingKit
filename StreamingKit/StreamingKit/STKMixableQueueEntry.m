@@ -819,6 +819,24 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
 
 - (void)dealloc
 {
+    if (_fileStream)
+    {
+        AudioFileStreamClose(_fileStream);
+        _fileStream = nil;
+    }
+    
+    if (_audioConverter)
+    {
+        AudioConverterDispose(_audioConverter);
+        _audioConverter = nil;
+    }
+    
+    free(_readBuffer);
+    free(_pcmAudioBufferList.mBuffers[0].mData);
+    
+    _pcmAudioBufferList.mBuffers[0].mData = NULL;
+    _pcmAudioBuffer = NULL;
+    
     pthread_mutex_destroy(&_entryMutex);
     pthread_cond_destroy(&_playerThreadReadyCondition);
 }
