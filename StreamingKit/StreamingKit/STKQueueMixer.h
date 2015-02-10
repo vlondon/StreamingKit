@@ -45,6 +45,7 @@ STKQueueMixerState;
 
 - (BOOL)itemIsQueuedOrPlaying:(NSString *)itemID;
 - (void)playNext:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor;
+- (void)replaceNext:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor;
 - (void)queueURL:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor;
 - (void)skipItemWithId:(NSString *)entryID;
 - (void)stopPlayback:(BOOL)keepTrack;

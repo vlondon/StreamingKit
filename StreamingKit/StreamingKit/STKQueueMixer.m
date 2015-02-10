@@ -362,45 +362,6 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     return @[_mixBus0, _mixBus1, _mixQueue];
 }
 
-
-/*
- @brief Queue a URL to be played as soon as possible; place as next up bus entry and put current next up
-        entry back to the front of the queue.
- 
- @param url to play
- @param trackID to use for identifying entry
- @param totalTime of the tack
- @param crossfade time before end of file to start fade in ms.
- @param fadeFor time in ms
- 
- @return void
- */
-- (void)playNext:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor
-{
-    STKMixableQueueEntry *pushingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
-    [pushingEntry beginEntryLoad];
-    
-    STKMixableQueueEntry *bargedEntry;
-    if (BUS_0 == _busState || FADE_FROM_0 == _busState)
-    {
-        // Next up is bus 1, so insert our queue-jumper here and place the currently up next entry to front of queue
-        bargedEntry = _mixBus1;
-        _mixBus1 = pushingEntry;
-    }
-    else
-    {
-        bargedEntry = _mixBus0;
-        _mixBus0 = pushingEntry;
-    }
-    
-    if (nil != bargedEntry) {
-        pthread_mutex_lock(&_playerMutex);
-        [_mixQueue addObject:bargedEntry];
-        pthread_mutex_unlock(&_playerMutex);
-    }
-}
-
-
 /*
  @brief Queue source to back of queue
  
@@ -423,6 +384,80 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     if (!(self.mixerState & STKQueueMixerStateRunning)) {
         [self startPlayback];
     }
+}
+
+/*
+ @brief Queue a URL to be played as soon as possible; place as next up bus entry and put current next up
+        entry back to the front of the queue.
+ 
+ @param url to play
+ @param trackID to use for identifying entry
+ @param totalTime of the tack
+ @param crossfade time before end of file to start fade in ms.
+ @param fadeFor time in ms
+ 
+ @return void
+ */
+- (void)playNext:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor
+{
+    STKMixableQueueEntry *pushingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
+    [pushingEntry beginEntryLoad];
+    
+    STKMixableQueueEntry *bargedEntry = [self replaceNextUpWithEntry:pushingEntry];
+    if (nil != bargedEntry) {
+        pthread_mutex_lock(&_playerMutex);
+        [_mixQueue addObject:bargedEntry];
+        pthread_mutex_unlock(&_playerMutex);
+    }
+}
+
+/*
+ @brief Queue a URL to be played as soon as possible, replacing current next up entry.
+ 
+ @param url to play
+ @param trackID to use for identifying entry
+ @param totalTime of the tack
+ @param crossfade time before end of file to start fade in ms.
+ @param fadeFor time in ms
+ 
+ @return void
+ */
+- (void)replaceNext:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor
+{
+    STKMixableQueueEntry *replacingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
+    [replacingEntry beginEntryLoad];
+    
+    STKMixableQueueEntry *bargedEntry = [self replaceNextUpWithEntry:replacingEntry];
+    if (nil != bargedEntry) {
+        
+        [bargedEntry tidyUp];
+        bargedEntry = nil;
+    }
+}
+
+/*
+ @brief Replace the next up entry with the passed entry.
+ 
+ @param replaceWith will be used in place of the currently next up track.
+ 
+ @return reference to the entry that was replaced.
+ */
+- (STKMixableQueueEntry *)replaceNextUpWithEntry:(STKMixableQueueEntry *)replaceWith
+{
+    STKMixableQueueEntry *replacedEntry;
+    if (BUS_0 == _busState || FADE_FROM_0 == _busState)
+    {
+        // Next up is bus 1, so insert our queue-jumper here and place the currently up next entry to front of queue
+        replacedEntry = _mixBus1;
+        _mixBus1 = replaceWith;
+    }
+    else
+    {
+        replacedEntry = _mixBus0;
+        _mixBus0 = replaceWith;
+    }
+    
+    return replacedEntry;
 }
 
 
