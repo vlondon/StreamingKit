@@ -351,6 +351,22 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     AudioUnitSetParameter(_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Output, 0, _volume, 0);
 }
 
+#pragma mark Properties
+
+- (double)progress {
+    STKMixableQueueEntry *nowPlaying = (BUS_0 == _busState) ? _mixBus0 : _mixBus1;
+    
+    if (nowPlaying == nil) {
+        return 0;
+    }
+    
+    OSSpinLockLock(&nowPlaying->spinLock);
+    double retval = nowPlaying->seekTime + (nowPlaying->framesPlayed / k_graphSampleRate);
+    OSSpinLockUnlock(&nowPlaying->spinLock);
+    
+    return retval;
+}
+
 
 #pragma mark Queue management
 

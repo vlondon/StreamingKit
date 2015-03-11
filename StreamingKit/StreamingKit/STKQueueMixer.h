@@ -40,8 +40,11 @@ STKQueueMixerState;
 
 @property (nonatomic, weak) id<STKQueueMixerDelegate> delegate;
 @property (nonatomic) STKQueueMixerState mixerState;
-@property (nonatomic) float volume;
 @property (nonatomic, readonly) NSArray *mixerQueue;
+@property (nonatomic) float volume;
+
+// returns the amount of time played of the current track in seconds
+@property (nonatomic, readonly) double progress;
 
 - (BOOL)itemIsQueuedOrPlaying:(NSString *)itemID;
 - (void)playNext:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor;
