@@ -428,6 +428,29 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 }
 
 /*
+ @brief Queue a URL to be played at the specified index; place as next up bus entry and put current next up
+ entry back to the front of the queue.
+ 
+ @param url to play
+ @param trackID to use for identifying entry
+ @param totalTime of the tack
+ @param crossfade time before end of file to start fade in ms.
+ @param fadeFor time in ms
+ @param trackIndex order of the track
+ 
+ @return void
+ */
+- (void)insertTrack:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor atIndex:(int) trackIndex
+{
+    STKMixableQueueEntry *pushingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
+    [pushingEntry beginEntryLoad];
+    
+    pthread_mutex_lock(&_playerMutex);
+    [_mixQueue insertObject:pushingEntry atIndex:_mixQueue.count + 1 - trackIndex];
+    pthread_mutex_unlock(&_playerMutex);
+}
+
+/*
  @brief Queue a URL to be played as soon as possible, replacing current next up entry.
  
  @param url to play
@@ -444,6 +467,37 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     [replacingEntry beginEntryLoad];
     
     STKMixableQueueEntry *bargedEntry = [self replaceNextUpWithEntry:replacingEntry];
+    if (nil != bargedEntry) {
+        
+        [bargedEntry tidyUp];
+        bargedEntry = nil;
+    }
+}
+
+/*
+ @brief Queue a URL to be played at the specified index, replacing the entry at that index.
+ 
+ @param url to play
+ @param trackID to use for identifying entry
+ @param totalTime of the tack
+ @param crossfade time before end of file to start fade in ms.
+ @param fadeFor time in ms
+ @param trackIndex order of the track
+ 
+ @return void
+ */
+- (void)replaceTrack:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor atIndex:(int) trackIndex
+{
+    STKMixableQueueEntry *replacingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
+    [replacingEntry beginEntryLoad];
+    
+    STKMixableQueueEntry *bargedEntry = [_mixQueue objectAtIndex:trackIndex];
+    
+    pthread_mutex_lock(&_playerMutex);
+    [_mixQueue replaceObjectAtIndex:_mixQueue.count + 1 - trackIndex withObject:replacingEntry];
+    pthread_mutex_unlock(&_playerMutex);
+    
+    
     if (nil != bargedEntry) {
         
         [bargedEntry tidyUp];
