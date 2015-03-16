@@ -235,6 +235,8 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     
     if (entryForBus->_pcmBufferUsedFrameCount > k_framesRequiredToPlay || (framesToGo < k_framesRequiredToPlay && framesToGo <= entryForBus->_pcmBufferUsedFrameCount))
     {
+        player.mixerState = STKQueueMixerStatePlaying;
+        
         if (end > start)
         {
             UInt32 framesToCopy = MIN(inNumberFrames, used);
@@ -286,12 +288,16 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     }
     else
     {
+        player.mixerState = STKQueueMixerStateBuffering;
+        
         memset(ioData->mBuffers[0].mData, 0, ioData->mBuffers[0].mDataByteSize);
         return error;
     }
     
     if (totalFramesCopied < inNumberFrames)
     {
+        player.mixerState = STKQueueMixerStateBuffering;
+        
         UInt32 delta = inNumberFrames - totalFramesCopied;
         memset(ioData->mBuffers[0].mData + (totalFramesCopied * frameSizeInBytes), 0, delta * frameSizeInBytes);
     }    
@@ -316,23 +322,17 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 {
     AUGraphStop(_audioGraph);
     
-    STKQueueMixerState oldState = self.mixerState;
-    
     if (keepTrack) {
         self.mixerState = STKQueueMixerStatePaused;
     } else {
         self.mixerState = STKQueueMixerStateStopped;
         [self clearQueue];
     }
-    
-    [self.delegate queue:self didChangeToState:self.mixerState from:oldState];
 }
 
 - (void)startPlayback
 {
-    STKQueueMixerState oldState = self.mixerState;
     self.mixerState = STKQueueMixerStatePlaying;
-    [self.delegate queue:self didChangeToState:self.mixerState from:oldState];
     
     Boolean graphIsRunning;
     AUGraphIsRunning(_audioGraph, &graphIsRunning);
@@ -366,6 +366,24 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     OSSpinLockUnlock(&nowPlaying->spinLock);
     
     return retval;
+}
+
+
+/*
+ @brief Set and alert mixer state if passed state is different to the current state
+ 
+ @param toState
+ 
+ @return void
+ */
+- (void)setMixerState:(STKQueueMixerState)toState {
+    
+    if (_mixerState != toState) {
+        STKQueueMixerState fromState = _mixerState;
+        _mixerState = toState;
+        
+        [self.delegate queue:self didChangeToState:toState from:fromState];
+    }
 }
 
 

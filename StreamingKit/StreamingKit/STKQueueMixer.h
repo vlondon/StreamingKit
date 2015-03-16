@@ -14,8 +14,9 @@ typedef enum
     STKQueueMixerStateRunning = 1,
     STKQueueMixerStatePlaying = 2 | STKQueueMixerStateRunning,
     STKQueueMixerStatePaused = 4 | STKQueueMixerStateRunning,
-    STKQueueMixerStateStopped = 8,
-    STKQueueMixerStateError = 16,
+    STKQueueMixerStateBuffering = 8 | STKQueueMixerStateRunning,
+    STKQueueMixerStateStopped = 16,
+    STKQueueMixerStateError = 32,
 }
 STKQueueMixerState;
 
