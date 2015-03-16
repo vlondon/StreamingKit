@@ -231,8 +231,9 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     UInt32 used = entryForBus->_pcmBufferUsedFrameCount;
     UInt32 start = entryForBus->_pcmBufferFrameStartIndex;
     UInt32 end = (entryForBus->_pcmBufferFrameStartIndex + entryForBus->_pcmBufferUsedFrameCount) % entryForBus->_pcmBufferTotalFrameCount;
+    UInt32 framesToGo = entryForBus->_totalFrames - entryForBus->lastFrameQueued;
     
-    if (entryForBus->framesQueued > k_framesRequiredToPlay)
+    if (entryForBus->_pcmBufferUsedFrameCount > k_framesRequiredToPlay || (framesToGo < k_framesRequiredToPlay && framesToGo <= entryForBus->_pcmBufferUsedFrameCount))
     {
         if (end > start)
         {
