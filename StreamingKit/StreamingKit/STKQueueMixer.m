@@ -45,6 +45,8 @@ typedef enum
     BUS_STATE _busState;
     
     pthread_mutex_t _playerMutex;
+    
+    UInt64 _framesToContinueAfterBuffer;
 }
 
 @end
@@ -72,6 +74,8 @@ const int k_maxLoadingEntries = 5;
         _mixQueue = [[NSMutableArray alloc] init];
         _startingPlay = YES;
         _busState = BUS_0;
+        
+        _framesToContinueAfterBuffer = k_framesRequiredToPlay;
         
         pthread_mutexattr_t attr;
         pthread_mutexattr_init(&attr);
@@ -231,9 +235,21 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     UInt32 used = entryForBus->_pcmBufferUsedFrameCount;
     UInt32 start = entryForBus->_pcmBufferFrameStartIndex;
     UInt32 end = (entryForBus->_pcmBufferFrameStartIndex + entryForBus->_pcmBufferUsedFrameCount) % entryForBus->_pcmBufferTotalFrameCount;
-    UInt32 framesToGo = entryForBus->_totalFrames - entryForBus->lastFrameQueued;
     
-    if (entryForBus->_pcmBufferUsedFrameCount > k_framesRequiredToPlay || (framesToGo < k_framesRequiredToPlay && framesToGo <= entryForBus->_pcmBufferUsedFrameCount))
+    BOOL bufferIsReady = YES;
+    if (STKQueueMixerStateBuffering == player.mixerState) {
+        if (entryForBus->framesQueued < player->_framesToContinueAfterBuffer) {
+            bufferIsReady = NO;
+        }
+    } else if (STKQueueMixerStateReady == player.mixerState) {
+        if ((entryForBus->framesQueued - entryForBus->framesPlayed) < k_framesRequiredToPlay) {
+            bufferIsReady = NO;
+        }
+    } else if (entryForBus->_pcmBufferUsedFrameCount <= inNumberFrames) {
+        bufferIsReady = NO;
+    }
+    
+    if (bufferIsReady)
     {
         player.mixerState = STKQueueMixerStatePlaying;
         
@@ -289,6 +305,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     else
     {
         player.mixerState = STKQueueMixerStateBuffering;
+        player->_framesToContinueAfterBuffer = entryForBus->framesPlayed + k_framesRequiredToPlay;
         
         memset(ioData->mBuffers[0].mData, 0, ioData->mBuffers[0].mDataByteSize);
         return error;
@@ -297,6 +314,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     if (totalFramesCopied < inNumberFrames)
     {
         player.mixerState = STKQueueMixerStateBuffering;
+        player->_framesToContinueAfterBuffer = entryForBus->framesQueued + k_framesRequiredToPlay;
         
         UInt32 delta = inNumberFrames - totalFramesCopied;
         memset(ioData->mBuffers[0].mData + (totalFramesCopied * frameSizeInBytes), 0, delta * frameSizeInBytes);

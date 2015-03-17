@@ -19,7 +19,6 @@
     volatile UInt32 _pcmBufferTotalFrameCount;
     volatile UInt32 _pcmBufferFrameSizeInBytes;
     
-    Float64 _totalFrames;
     Float64 _fadeFrom;
     Float64 _fadeRatio;
     
