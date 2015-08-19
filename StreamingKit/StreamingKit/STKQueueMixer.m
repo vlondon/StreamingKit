@@ -707,7 +707,6 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     
     [_mixQueue removeObject:entry];
     [self.delegate queue:self didFinishPlayingQueueItemId:entry.queueItemId];
-    [entry tidyUp];
     
     STKMixableQueueEntry *nowPlaying;
     if (0 == busNumber)
@@ -726,6 +725,8 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     [self.delegate queue:self didStartPlayingQueueItemId:nowPlaying];
     [self updateQueue];
     [self loadTracks];
+    
+    [entry tidyUp];
 }
 
 

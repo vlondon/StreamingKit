@@ -751,6 +751,7 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
     }
     
     _playbackThreadRunLoop = nil;
+    [self freeResources];
 }
 
 
@@ -817,8 +818,8 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
     [self stopThread];
 }
 
-- (void)dealloc
-{
+- (void)freeResources {
+    
     if (_fileStream)
     {
         AudioFileStreamClose(_fileStream);
