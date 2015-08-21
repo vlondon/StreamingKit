@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A1F544A1B83490300E6C716 /* STKStreamBufferPool.h in Headers */ = {isa = PBXBuildFile; fileRef = 1A1F54481B83490300E6C716 /* STKStreamBufferPool.h */; };
+		1A1F544B1B83490300E6C716 /* STKStreamBufferPool.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A1F54491B83490300E6C716 /* STKStreamBufferPool.m */; };
 		1A5207071A374BCD00523C31 /* STKMixableQueueEntry.h in Headers */ = {isa = PBXBuildFile; fileRef = 1A5207051A374BCD00523C31 /* STKMixableQueueEntry.h */; };
 		1A5207081A374BCD00523C31 /* STKMixableQueueEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A5207061A374BCD00523C31 /* STKMixableQueueEntry.m */; };
 		1ACC25D119A6288E00F6B2A7 /* STKEventScheduler.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ACC25CF19A6288E00F6B2A7 /* STKEventScheduler.h */; };
@@ -100,6 +102,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1A1F54481B83490300E6C716 /* STKStreamBufferPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STKStreamBufferPool.h; sourceTree = "<group>"; };
+		1A1F54491B83490300E6C716 /* STKStreamBufferPool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STKStreamBufferPool.m; sourceTree = "<group>"; };
 		1A5207051A374BCD00523C31 /* STKMixableQueueEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STKMixableQueueEntry.h; sourceTree = "<group>"; };
 		1A5207061A374BCD00523C31 /* STKMixableQueueEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STKMixableQueueEntry.m; sourceTree = "<group>"; };
 		1AC30E121A385ACB002AA3D5 /* STKConstants.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = STKConstants.h; sourceTree = "<group>"; };
@@ -316,6 +320,8 @@
 				1A5207051A374BCD00523C31 /* STKMixableQueueEntry.h */,
 				1A5207061A374BCD00523C31 /* STKMixableQueueEntry.m */,
 				1AC30E121A385ACB002AA3D5 /* STKConstants.h */,
+				1A1F54481B83490300E6C716 /* STKStreamBufferPool.h */,
+				1A1F54491B83490300E6C716 /* STKStreamBufferPool.m */,
 			);
 			path = StreamingKit;
 			sourceTree = "<group>";
@@ -361,6 +367,7 @@
 				5B949CD51A1140E4005675A0 /* STKDataSource.h in Headers */,
 				5B949CD61A1140E4005675A0 /* STKDataSourceWrapper.h in Headers */,
 				5B949CD71A1140E4005675A0 /* STKHTTPDataSource.h in Headers */,
+				1A1F544A1B83490300E6C716 /* STKStreamBufferPool.h in Headers */,
 				5B949CD81A1140E4005675A0 /* STKLocalFileDataSource.h in Headers */,
 				5B949CD91A1140E4005675A0 /* STKQueueEntry.h in Headers */,
 			);
@@ -560,6 +567,7 @@
 				1ACC25D919A64AA500F6B2A7 /* STKHTTPMetadataSource.m in Sources */,
 				A1E7C505188D5E550010896F /* STKLocalFileDataSource.m in Sources */,
 				A1BF65D2189A6582004DD08C /* STKQueueEntry.m in Sources */,
+				1A1F544B1B83490300E6C716 /* STKStreamBufferPool.m in Sources */,
 				A1E7C504188D5E550010896F /* STKHTTPDataSource.m in Sources */,
 				A1E7C503188D5E550010896F /* STKDataSourceWrapper.m in Sources */,
 				A1E7C502188D5E550010896F /* STKDataSource.m in Sources */,

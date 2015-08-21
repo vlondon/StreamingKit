@@ -56,5 +56,6 @@ STKQueueMixerState;
 - (void)skipItemWithId:(NSString *)entryID;
 - (void)stopPlayback:(BOOL)keepTrack;
 - (void)startPlayback;
+- (void)flushPool;
 
 @end

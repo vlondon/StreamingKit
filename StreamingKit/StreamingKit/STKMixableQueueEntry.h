@@ -8,6 +8,7 @@
 #import "STKDataSource.h"
 #import "STKQueueEntry.h"
 
+@class STKStreamBufferPool;
 
 @interface STKMixableQueueEntry : STKQueueEntry<STKDataSourceDelegate>
 {
@@ -27,7 +28,7 @@
 
 - (void)setFadeoutAt:(Float64)fadeFrame overDuration:(Float64)fadeForFrames trackDuration:(Float64)totalFrames;
 - (void)fadeFromNow;
-- (void)beginEntryLoad;
+- (void)beginEntryLoadWithPool:(STKStreamBufferPool *)bufferPool;
 - (void)continueBuffering;
 - (void)wakeupPlaybackThread;
 - (void)tidyUp;
