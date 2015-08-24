@@ -7,7 +7,6 @@
 
 #import <pthread/pthread.h>
 #import "STKConstants.h"
-#import "STKStreamBufferPool.h"
 #import "STKMixableQueueEntry.h"
 
 static AudioStreamBasicDescription canonicalAudioStreamBasicDescription;
@@ -38,7 +37,7 @@ const int k_readBufferSize = 64 * 1024;
     BOOL _continueRunLoop;
 }
 
-@property (nonatomic) STKStreamBufferPool *bufferPool;
+@property (nonatomic, readonly) BOOL isLoading;
 
 @end
 
@@ -50,6 +49,7 @@ const int k_readBufferSize = 64 * 1024;
     self = [super initWithDataSource:dataSource andQueueItemId:queueItemId];
     if (nil != self)
     {
+        _isLoading = NO;
         _discontinuousData = NO;
         _continueRunLoop = YES;
         _waiting = NO;
@@ -72,9 +72,9 @@ const int k_readBufferSize = 64 * 1024;
         _readBuffer = calloc(sizeof(UInt8), k_readBufferSize);
         _pcmAudioBuffer = &_pcmAudioBufferList.mBuffers[0];
         
-        // Not going to alloc mData here, as we get our buffer from the buffer pool.
         _pcmAudioBufferList.mNumberBuffers = 1;
         _pcmAudioBufferList.mBuffers[0].mDataByteSize = (canonicalAudioStreamBasicDescription.mSampleRate * STK_DEFAULT_PCM_BUFFER_SIZE_IN_SECONDS) * canonicalAudioStreamBasicDescription.mBytesPerFrame;
+        _pcmAudioBufferList.mBuffers[0].mData = (void*)calloc(_pcmAudioBuffer->mDataByteSize, 1);
         _pcmAudioBufferList.mBuffers[0].mNumberChannels = 2;
         
         _pcmBufferFrameSizeInBytes = canonicalAudioStreamBasicDescription.mBytesPerFrame;
@@ -108,23 +108,18 @@ const int k_readBufferSize = 64 * 1024;
 /*
  @brief Start load of the entry and register for data-related events
  
- @param bufferPool from which to attempt to acquire buffer memory
+ @param runLoop on which to process entry data
  
  @return void
  */
-- (void)beginEntryLoadWithPool:(STKStreamBufferPool *)bufferPool
+- (void)beginEntryLoad
 {
-    if (nil != _pcmAudioBufferList.mBuffers[0].mData) {
+    if (YES == self.isLoading)
+    {
         return;
     }
     
-    _pcmAudioBufferList.mBuffers[0].mData = [bufferPool getFreeBuffer];
-    if (!_pcmAudioBufferList.mBuffers[0].mData) {
-        return;
-    }
-
-    // As we got buffer from the passed pool, keep reference to surrender it to when finished.
-    self.bufferPool = bufferPool;
+    _isLoading = YES;
     self.dataSource.delegate = self;
     
     while (nil == _playbackThreadRunLoop)
@@ -838,9 +833,7 @@ void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UInt32 num
     }
     
     free(_readBuffer);
-
-    NSAssert(self.bufferPool || !(_pcmAudioBufferList.mBuffers[0].mData), @"Attempting to return memory to a nil buffer pool.");
-    [self.bufferPool surrenderBuffer:_pcmAudioBufferList.mBuffers[0].mData];
+    free(_pcmAudioBufferList.mBuffers[0].mData);
     
     _pcmAudioBufferList.mBuffers[0].mData = NULL;
     _pcmAudioBuffer = NULL;

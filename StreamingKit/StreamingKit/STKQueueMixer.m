@@ -10,7 +10,6 @@
 #import "STKAudioPlayer.h"
 #import "STKDataSource.h"
 #import "STKMixableQueueEntry.h"
-#import "STKStreamBufferPool.h"
 #import "STKQueueMixer.h"
 
 
@@ -49,8 +48,6 @@ typedef enum
     
     UInt64 _framesToContinueAfterBuffer;
 }
-
-@property (nonatomic, readonly) STKStreamBufferPool *bufferPool;
 
 @end
 
@@ -96,8 +93,6 @@ const int k_maxLoadingEntries = 5;
             .mBitsPerChannel = 8 * k_bytesPerSample,
             .mBytesPerPacket = (k_bytesPerSample * 2)
         };
-        
-        _bufferPool = [[STKStreamBufferPool alloc] initWithNumber:5 withSize:(_outputStreamDescription.mSampleRate * STK_DEFAULT_PCM_BUFFER_SIZE_IN_SECONDS) * _outputStreamDescription.mBytesPerFrame];
         
         [self buildAudioGraph];
         [self startPlayback];
@@ -459,7 +454,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 - (void)playNext:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor
 {
     STKMixableQueueEntry *pushingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
-    [pushingEntry beginEntryLoadWithPool:self.bufferPool];
+    [pushingEntry beginEntryLoad];
     
     STKMixableQueueEntry *bargedEntry = [self replaceNextUpWithEntry:pushingEntry];
     if (nil != bargedEntry) {
@@ -485,7 +480,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 - (void)insertTrack:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor atIndex:(int) trackIndex
 {
     STKMixableQueueEntry *pushingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
-    [pushingEntry beginEntryLoadWithPool:self.bufferPool];
+    [pushingEntry beginEntryLoad];
     
     pthread_mutex_lock(&_playerMutex);
     [_mixQueue insertObject:pushingEntry atIndex:_mixQueue.count + 1 - trackIndex];
@@ -506,7 +501,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 - (void)replaceNext:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor
 {
     STKMixableQueueEntry *replacingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
-    [replacingEntry beginEntryLoadWithPool:self.bufferPool];
+    [replacingEntry beginEntryLoad];
     
     STKMixableQueueEntry *bargedEntry = [self replaceNextUpWithEntry:replacingEntry];
     if (nil != bargedEntry) {
@@ -531,7 +526,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 - (void)replaceTrack:(NSURL *)url withID:(NSString *)trackID trackLength:(NSInteger)totalTime fadeAt:(NSInteger)crossfade fadeTime:(NSInteger)fadeFor atIndex:(int) trackIndex
 {
     STKMixableQueueEntry *replacingEntry = [self entryForURL:url withID:trackID trackLength:totalTime fadeAt:crossfade fadeTime:fadeFor];
-    [replacingEntry beginEntryLoadWithPool:self.bufferPool];
+    [replacingEntry beginEntryLoad];
     
     STKMixableQueueEntry *bargedEntry = [_mixQueue objectAtIndex:trackIndex];
     
@@ -750,7 +745,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     }
     
     // Should already be loading, but it is possible to reach a track before it has started loading.
-    [nextUp beginEntryLoadWithPool:self.bufferPool];
+    [nextUp beginEntryLoad];
     
     if (_startingPlay)
     {
@@ -775,17 +770,12 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     int queueSize = (int)_mixQueue.count;
     for (int entryIndex = queueSize - 1; entryIndex > MAX((queueSize - k_maxLoadingEntries), 0); --entryIndex)
     {
-        [_mixQueue[entryIndex] beginEntryLoadWithPool:self.bufferPool];
+        [_mixQueue[entryIndex] beginEntryLoad];
     }
 }
 
 
 #pragma mark Tidy up
-
-
-- (void)flushPool {
-    [self.bufferPool flush];
-}
 
 
 - (void)clearQueue
@@ -810,8 +800,6 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     _busState = BUS_0;
     
     self.volume = 1;
-    
-    [self.bufferPool flush];
 }
 
 
