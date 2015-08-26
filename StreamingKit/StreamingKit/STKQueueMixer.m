@@ -237,15 +237,24 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     UInt32 end = (entryForBus->_pcmBufferFrameStartIndex + entryForBus->_pcmBufferUsedFrameCount) % entryForBus->_pcmBufferTotalFrameCount;
     
     BOOL bufferIsReady = YES;
+    BOOL fileFinishedEarly = NO;
+    
     if (STKQueueMixerStateBuffering == player.mixerState) {
         if (entryForBus->framesQueued < player->_framesToContinueAfterBuffer) {
+            
             bufferIsReady = NO;
         }
     } else if (STKQueueMixerStateReady == player.mixerState) {
         if ((entryForBus->framesQueued - entryForBus->framesPlayed) < k_framesRequiredToPlay) {
+            
             bufferIsReady = NO;
         }
+    } else if (ABS(entryForBus->lastFrameQueued - entryForBus->framesPlayed) <= inNumberFrames && !entryForBus.dataSource.hasBytesAvailable) {
+        
+        fileFinishedEarly = YES;
+        
     } else if (entryForBus->_pcmBufferUsedFrameCount <= inNumberFrames) {
+    
         bufferIsReady = NO;
     }
     
@@ -265,8 +274,8 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
             
             OSSpinLockLock(&entryForBus->spinLock);
             entryForBus->_pcmBufferFrameStartIndex = (entryForBus->_pcmBufferFrameStartIndex + totalFramesCopied) % entryForBus->_pcmBufferTotalFrameCount;
-            entryForBus->_pcmBufferUsedFrameCount -= totalFramesCopied;
             entryForBus->framesPlayed += MIN(inNumberFrames, entryForBus->_pcmBufferUsedFrameCount);
+            entryForBus->_pcmBufferUsedFrameCount -= totalFramesCopied;
             OSSpinLockUnlock(&entryForBus->spinLock);
         }
         else
@@ -295,8 +304,8 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
             
             OSSpinLockLock(&entryForBus->spinLock);
             entryForBus->_pcmBufferFrameStartIndex = (entryForBus->_pcmBufferFrameStartIndex + totalFramesCopied) % entryForBus->_pcmBufferTotalFrameCount;
-            entryForBus->_pcmBufferUsedFrameCount -= totalFramesCopied;
             entryForBus->framesPlayed += MIN(inNumberFrames, entryForBus->_pcmBufferUsedFrameCount);
+            entryForBus->_pcmBufferUsedFrameCount -= totalFramesCopied;
             OSSpinLockUnlock(&entryForBus->spinLock);
         }
         
@@ -318,7 +327,13 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         
         UInt32 delta = inNumberFrames - totalFramesCopied;
         memset(ioData->mBuffers[0].mData + (totalFramesCopied * frameSizeInBytes), 0, delta * frameSizeInBytes);
-    }    
+        
+        if (fileFinishedEarly) {
+            
+            // File finished, but was smaller that it reported.
+            player.mixerState = STKQueueMixerStatePlaying;
+        }
+    }
     
     if (entryForBus->framesPlayed == entryForBus->lastFrameQueued)
     {
