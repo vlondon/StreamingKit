@@ -170,6 +170,10 @@ typedef void(^STKFrameFilter)(UInt32 channelsPerFrame, UInt32 bytesPerFrame, UIn
 /// URLs with unrecognised schemes will return nil.
 +(STKDataSource*) dataSourceFromURL:(NSURL*)url;
 
+// Data source that supports changing its URL in the middle of playback
+// NOTE: Only supports http/https URLs
++(STKDataSource*) dataSourceWithChangableURLFromInitialURL:(NSURL*)url;
+
 /// Creates a datasource from a URL that can provide embedded metadata.
 +(STKDataSource*) dataSourceWithMetadataFromURL:(NSURL*)url httpRequestHeaders:(NSDictionary *)requestHeaders;
 

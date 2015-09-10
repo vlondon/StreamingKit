@@ -40,7 +40,11 @@ typedef void(^STKURLBlock)(NSURL* url);
 typedef NSURL*(^STKURLProvider)();
 typedef void(^STKAsyncURLProvider)(STKHTTPDataSource* dataSource, BOOL forSeek, STKURLBlock callback);
 
-@interface STKHTTPDataSource : STKCoreFoundationDataSource
+@interface STKHTTPDataSource : STKCoreFoundationDataSource {
+    @protected
+        SInt64 requestedStartOffset;
+        STKAsyncURLProvider asyncUrlProvider;
+}
 
 @property (readonly, retain) NSURL* url;
 @property (readonly) UInt32 httpStatusCode;

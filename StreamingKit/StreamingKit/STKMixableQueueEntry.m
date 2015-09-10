@@ -7,11 +7,12 @@
 
 #import <pthread/pthread.h>
 #import "STKConstants.h"
+#import "STKAutoRecoveringHTTPDataSource.h"
+#import "STKAdaptiveURLHTTPDataSource.h"
 #import "STKMixableQueueEntry.h"
 
 static AudioStreamBasicDescription canonicalAudioStreamBasicDescription;
 const int k_readBufferSize = 64 * 1024;
-
 
 @interface STKMixableQueueEntry() {
     
@@ -19,6 +20,7 @@ const int k_readBufferSize = 64 * 1024;
     
     UInt32 _readBufferSize;
     UInt8 *_readBuffer;
+    SInt64 _totalBytesRead;
     AudioBufferList _pcmAudioBufferList;
     
     NSThread *_playbackThread;
@@ -114,6 +116,12 @@ const int k_readBufferSize = 64 * 1024;
  */
 - (void)beginEntryLoad
 {
+    [self loadEntryWithOffset:0];
+}
+
+
+- (void)loadEntryWithOffset:(SInt64)offset {
+    
     if (YES == self.isLoading)
     {
         return;
@@ -129,8 +137,49 @@ const int k_readBufferSize = 64 * 1024;
     
     [self.dataSource registerForEvents:_playbackThreadRunLoop];
     [self invokeOnPlaybackThread:^ {
-        [self.dataSource seekToOffset:0];
+        [self.dataSource seekToOffset:offset];
     }];
+}
+
+
+- (void)changeToURL:(NSURL *)url andDiscardBuffer:(BOOL)discardBuffer {
+    
+    [self.dataSource unregisterForEvents];
+    [self.dataSource close];
+    
+    STKAutoRecoveringHTTPDataSource *recoveringDataSource = ((STKAutoRecoveringHTTPDataSource *)self.dataSource);
+    [((STKAdaptiveURLHTTPDataSource *)recoveringDataSource.innerDataSource) switchToURL:url];
+    
+    if (discardBuffer) {
+        [self flushBuffers];
+    }
+    
+    // If the entry is already in the loading state, start load with new URL now.
+    if (self.isLoading) {
+        
+        _isLoading = NO;
+        [self loadEntryWithOffset:_totalBytesRead];
+    }
+}
+
+
+- (void)flushBuffers {
+    
+    OSSpinLockLock(&self->spinLock);
+    
+    memset(_readBuffer, 0, k_readBufferSize);
+    memset(_pcmAudioBufferList.mBuffers[0].mData, 0, _pcmAudioBuffer->mDataByteSize);
+    
+    _totalBytesRead = 0;
+    _pcmBufferUsedFrameCount = 0;
+    _pcmBufferFrameStartIndex = 0;
+    
+    processedPacketsCount = 0;
+    processedPacketsSizeTotal = 0;
+    
+    OSSpinLockUnlock(&self->spinLock);
+    
+    [self reset];
 }
 
 
@@ -155,6 +204,9 @@ const int k_readBufferSize = 64 * 1024;
     {
         return;
     }
+    
+    // Keeping track of this so that we know where to resume from when changing URL.
+    _totalBytesRead += read;
     
     if (_fileStream == 0)
     {
@@ -182,16 +234,14 @@ const int k_readBufferSize = 64 * 1024;
     {
         flags = kAudioFileStreamParseFlag_Discontinuity;
     }
-    
+
     if (_fileStream)
     {
         error = AudioFileStreamParseBytes(_fileStream, read, _readBuffer, flags);
         if (error)
         {
-            if (dataSourceIn == self.dataSource)
-            {
-//                [self unexpectedError:STKAudioPlayerErrorStreamParseBytesFailed];
-            }
+            AudioFileStreamClose(_fileStream);
+            _fileStream = nil;
             
             return;
         }
@@ -341,8 +391,6 @@ OSStatus EntryAudioConverterCallback(AudioConverterRef inAudioConverter, UInt32*
     
     return 0;
 }
-
-
 
 #pragma mark Audio stream parsing
 

@@ -57,4 +57,7 @@ STKQueueMixerState;
 - (void)stopPlayback:(BOOL)keepTrack;
 - (void)startPlayback;
 
+
+- (void)changeTrack:(NSString *)withID toUse:(NSURL *)newURL;
+
 @end

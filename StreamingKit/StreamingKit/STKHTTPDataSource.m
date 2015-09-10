@@ -53,7 +53,6 @@
     BOOL httpHeaderNotAvailable;
 
     NSURL* currentUrl;
-    STKAsyncURLProvider asyncUrlProvider;
     NSDictionary* httpHeaders;
     AudioFileTypeID audioFileTypeHint;
     NSDictionary* requestHeaders;
@@ -382,6 +381,13 @@
             
             return;
         }
+        else if (requestedStartOffset)
+        {   
+            SInt64 theOffset = requestedStartOffset;
+            requestedStartOffset = 0;
+            
+            [self seekToOffset:theOffset];
+        }
         else
         {
             return;
@@ -430,7 +436,12 @@
     
     self->isInErrorState = NO;
     
-    if (!self->supportsSeek && offset != self->relativePosition)
+    if (0 < seekStart && 0 == httpStatusCode) {
+        requestedStartOffset = seekStart;
+        seekStart = 0;
+    }
+    
+    if (!self->supportsSeek && seekStart != self->relativePosition)
     {
         return;
     }
