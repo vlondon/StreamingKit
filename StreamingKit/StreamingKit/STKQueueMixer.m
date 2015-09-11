@@ -792,30 +792,8 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 
 - (void)changeTrack:(NSString *)withID toUse:(NSURL *)newURL {
     
-    BOOL discardBuffer = YES;
     STKMixableQueueEntry *entryToChange = [self entryForID:withID];
-    
-    if ([self entryIsPlaying:entryToChange]) {
-        
-        // If the entry is currently playing, we need to keep the buffer, otherwise,
-        // it's OK (and probably safer) to throw away and start the load again.
-        discardBuffer = NO;
-    }
-    
-    [entryToChange changeToURL:newURL andDiscardBuffer:discardBuffer];
-}
-
-- (BOOL)entryIsPlaying:(STKMixableQueueEntry *)entry {
-    
-    if (entry == _mixBus0 && (BUS_0 == _busState || FADE_FROM_0 == _busState)) {
-        return YES;
-    }
-    
-    if (entry == _mixBus1 && (BUS_1 == _busState || FADE_FROM_1 == _busState)) {
-        return YES;
-    }
-    
-    return NO;
+    [entryToChange changeToURL:newURL];
 }
 
 

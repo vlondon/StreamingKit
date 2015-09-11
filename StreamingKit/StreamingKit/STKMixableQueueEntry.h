@@ -32,6 +32,6 @@
 - (void)wakeupPlaybackThread;
 - (void)tidyUp;
 
-- (void)changeToURL:(NSURL *)url andDiscardBuffer:(BOOL)discardBuffer;
+- (void)changeToURL:(NSURL *)url;
 
 @end

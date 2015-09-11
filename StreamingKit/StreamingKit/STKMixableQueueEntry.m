@@ -142,7 +142,7 @@ const int k_readBufferSize = 64 * 1024;
 }
 
 
-- (void)changeToURL:(NSURL *)url andDiscardBuffer:(BOOL)discardBuffer {
+- (void)changeToURL:(NSURL *)url {
     
     [self.dataSource unregisterForEvents];
     [self.dataSource close];
@@ -150,36 +150,12 @@ const int k_readBufferSize = 64 * 1024;
     STKAutoRecoveringHTTPDataSource *recoveringDataSource = ((STKAutoRecoveringHTTPDataSource *)self.dataSource);
     [((STKAdaptiveURLHTTPDataSource *)recoveringDataSource.innerDataSource) switchToURL:url];
     
-    if (discardBuffer) {
-        [self flushBuffers];
-    }
-    
     // If the entry is already in the loading state, start load with new URL now.
     if (self.isLoading) {
         
         _isLoading = NO;
         [self loadEntryWithOffset:_totalBytesRead];
     }
-}
-
-
-- (void)flushBuffers {
-    
-    OSSpinLockLock(&self->spinLock);
-    
-    memset(_readBuffer, 0, k_readBufferSize);
-    memset(_pcmAudioBufferList.mBuffers[0].mData, 0, _pcmAudioBuffer->mDataByteSize);
-    
-    _totalBytesRead = 0;
-    _pcmBufferUsedFrameCount = 0;
-    _pcmBufferFrameStartIndex = 0;
-    
-    processedPacketsCount = 0;
-    processedPacketsSizeTotal = 0;
-    
-    OSSpinLockUnlock(&self->spinLock);
-    
-    [self reset];
 }
 
 
