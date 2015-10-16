@@ -164,6 +164,9 @@ const int k_maxLoadingEntries = 5;
     AUGraphConnectNodeInput(_audioGraph, _mixerNode, 0, _outputNode, 0);
     
     AUGraphInitialize(_audioGraph);
+    
+    // Set input of non-playing input bus to 0, as default is 1 and we don't want an unbalanced initial track volume...
+    AudioUnitSetParameter(_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, 0, 0);
 }
 
 static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags* ioActionFlags, const AudioTimeStamp* inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList* ioData)
@@ -749,7 +752,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 {
     if (nil != _mixBus0 && nil != _mixBus1)
     {
-        // Bith tracks currently full, so no need to do anything
+        // Both tracks currently full, so no need to do anything
         return;
     }
     
