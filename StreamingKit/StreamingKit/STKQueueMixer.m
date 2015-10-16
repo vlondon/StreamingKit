@@ -166,7 +166,10 @@ const int k_maxLoadingEntries = 5;
     AUGraphInitialize(_audioGraph);
     
     // Set input of non-playing input bus to 0, as default is 1 and we don't want an unbalanced initial track volume...
-    AudioUnitSetParameter(_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, 0, 0);
+    float busChannel = 1;                   // We're silencing channel 1, as we start with bus 0.
+    float busVolume = 0;                    // Set volume to 0.
+    float frameOffset = 0;                  // Make the change instantly
+    AudioUnitSetParameter(_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, busChannel, busVolume, frameOffset);
 }
 
 static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags* ioActionFlags, const AudioTimeStamp* inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList* ioData)
@@ -229,6 +232,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
         player->_busState = (player->_busState == BUS_0) ? FADE_FROM_0 : FADE_FROM_1;
     }
     
+    // Here, the 0 is frame offset, which when 0 will make the change straight away.
     error = AudioUnitSetParameter(player->_mixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, inBusNumber, volume, 0);
     
     // Push data to hardware and update where to place data    
