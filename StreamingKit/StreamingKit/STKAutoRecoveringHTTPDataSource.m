@@ -374,11 +374,7 @@ static void PopulateOptionsWithDefault(STKAutoRecoveringHTTPDataSourceOptions* o
     const UInt32 httpStatusCode = self.innerDataSource.httpStatusCode;
     const bool isRetryableStatus = httpStatusCode >= 200 && httpStatusCode < 300;
     
-    NSLog(@"%@ on source %@ with http status %@ – will %@.",
-          NSStringFromSelector(_cmd),
-          dataSource,
-          @(httpStatusCode),
-          isRetryableStatus ? @"retry" : @"fail");
+    NSLog(@"Error on source %@ with http status %@ – will %@.", dataSource, @(httpStatusCode), isRetryableStatus ? @"retry" : @"fail");
     
     if(isRetryableStatus)
     {
