@@ -395,7 +395,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 #pragma mark Properties
 
 - (double)progress {
-    STKMixableQueueEntry *nowPlaying = (BUS_0 == _busState) ? _mixBus0 : _mixBus1;
+    STKMixableQueueEntry *nowPlaying = (BUS_0 == _busState || FADE_FROM_1 == _busState) ? _mixBus0 : _mixBus1;
     
     if (nowPlaying == nil) {
         return 0;
