@@ -177,9 +177,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     OSStatus error = 0;
     STKQueueMixer *player = (__bridge STKQueueMixer *)inRefCon;
     
-    
     // Determining what bus we're pulling from and what the volume should be.
-    
     if (inBusNumber != player->_busState && FADE_FROM_0 > player->_busState) {
         return error;
     }
@@ -247,7 +245,7 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
     BOOL fileFinishedEarly = NO;
     
     if (STKQueueMixerStateBuffering == player.mixerState) {
-        if (entryForBus->framesQueued < player->_framesToContinueAfterBuffer) {
+        if ((entryForBus->framesPlayed + entryForBus->_pcmBufferUsedFrameCount) < player->_framesToContinueAfterBuffer) {
             
             bufferIsReady = NO;
         }
