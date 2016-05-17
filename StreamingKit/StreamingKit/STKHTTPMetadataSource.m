@@ -43,7 +43,7 @@ const int NO_METADATA = -1;
 
 @property (nonatomic, retain) NSMutableData *metadataBytes;
 @property (readonly) int metadataStep;
-@property (readonly) dispatch_queue_t metadataParseQueue;
+@property (nonatomic, retain) dispatch_queue_t metadataParseQueue;
 @property int bytesUntilMetadata;
 @property int metadataSize;
 
