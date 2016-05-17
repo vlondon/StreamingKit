@@ -239,9 +239,7 @@ const int NO_METADATA = -1;
 
 
 - (void)dealloc {
-    
-    // dispatch queues are not auto-released, so make sure we do that here.
-    dispatch_release(self.metadataParseQueue);
+    self.metadataParseQueue = nil;
 }
 
 

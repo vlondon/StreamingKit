@@ -13,4 +13,6 @@ Pod::Spec.new do |s|
   s.ios.frameworks   = 'SystemConfiguration', 'CFNetwork', 'CoreFoundation', 'AudioToolbox'
   s.osx.deployment_target = '10.7'
   s.osx.frameworks   = 'SystemConfiguration', 'CFNetwork', 'CoreFoundation', 'AudioToolbox', 'AudioUnit'
+  s.tvos.deployment_target = "9.0"
+  s.tvos.frameworks   = 'SystemConfiguration', 'CFNetwork', 'CoreFoundation', 'AudioToolbox'  
 end
