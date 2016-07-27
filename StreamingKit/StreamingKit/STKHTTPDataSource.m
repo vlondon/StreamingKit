@@ -411,13 +411,17 @@
 
 -(void) reconnect
 {
-    NSRunLoop* savedEventsRunLoop = eventsRunLoop;
     
-    [self close];
-    
-    eventsRunLoop = savedEventsRunLoop;
-	
-    [self seekToOffset:self.position];
+    @synchronized (self) {
+        NSRunLoop* savedEventsRunLoop = eventsRunLoop;
+        
+        [self close];
+        
+        eventsRunLoop = savedEventsRunLoop;
+        
+        [self seekToOffset:self.position];
+
+    }
 }
 
 -(void) seekToOffset:(SInt64)offset
@@ -496,104 +500,108 @@
 
 -(void) openForSeek:(BOOL)forSeek
 {
-	int localRequestSerialNumber;
-	
-	requestSerialNumber++;
-	localRequestSerialNumber = requestSerialNumber;
-	
-    asyncUrlProvider(self, forSeek, ^(NSURL* url)
-    {
-		if (localRequestSerialNumber != self->requestSerialNumber)
-		{
-			return;
-		}
-	
-        self->currentUrl = url;
-
-        if (url == nil)
-        {
-            return;
-        }
-
-        CFHTTPMessageRef message = CFHTTPMessageCreateRequest(NULL, (CFStringRef)@"GET", (__bridge CFURLRef)self->currentUrl, kCFHTTPVersion1_1);
-
-        if (seekStart > 0 && supportsSeek)
-        {
-            CFHTTPMessageSetHeaderFieldValue(message, CFSTR("Range"), (__bridge CFStringRef)[NSString stringWithFormat:@"bytes=%lld-", seekStart]);
-
-            discontinuous = YES;
-        }
-
-        for (NSString* key in self->requestHeaders)
-        {
-            NSString* value = [self->requestHeaders objectForKey:key];
-            
-            CFHTTPMessageSetHeaderFieldValue(message, (__bridge CFStringRef)key, (__bridge CFStringRef)value);
-        }
+    
+    @synchronized (self) {
+        int localRequestSerialNumber;
         
-        CFHTTPMessageSetHeaderFieldValue(message, CFSTR("Accept"), CFSTR("*/*"));
-        CFHTTPMessageSetHeaderFieldValue(message, CFSTR("Ice-MetaData"), CFSTR("0"));
-
-        stream = CFReadStreamCreateForHTTPRequest(NULL, message);
-
-        if (stream == nil)
-        {
-            CFRelease(message);
-
-            [self errorOccured];
-
-            return;
-        }
- 
-        CFReadStreamSetProperty(stream, (__bridge CFStringRef)NSStreamNetworkServiceTypeBackground, (__bridge CFStringRef)NSStreamNetworkServiceTypeBackground);
-
-        if (!CFReadStreamSetProperty(stream, kCFStreamPropertyHTTPShouldAutoredirect, kCFBooleanTrue))
-        {
-            CFRelease(message);
-
-            [self errorOccured];
-
-            return;
-        }
-
-        // Proxy support
-        CFDictionaryRef proxySettings = CFNetworkCopySystemProxySettings();
-        CFReadStreamSetProperty(stream, kCFStreamPropertyHTTPProxy, proxySettings);
-        CFRelease(proxySettings);
-
-        // SSL support
-        if ([self->currentUrl.scheme caseInsensitiveCompare:@"https"] == NSOrderedSame)
-        {
-            NSDictionary* sslSettings = [NSDictionary dictionaryWithObjectsAndKeys:
-            (NSString*)kCFStreamSocketSecurityLevelNegotiatedSSL, kCFStreamSSLLevel,
-            [NSNumber numberWithBool:NO], kCFStreamSSLValidatesCertificateChain,
-            [NSNull null], kCFStreamSSLPeerName,
-            nil];
-
-            CFReadStreamSetProperty(stream, kCFStreamPropertySSLSettings, (__bridge CFTypeRef)sslSettings);
-        }
-
-        [self reregisterForEvents];
+        requestSerialNumber++;
+        localRequestSerialNumber = requestSerialNumber;
         
-		self->httpStatusCode = 0;
-		
-        // Open
-        if (!CFReadStreamOpen(stream))
-        {
-            CFRelease(stream);
-            CFRelease(message);
-            
-            stream = 0;
+        asyncUrlProvider(self, forSeek, ^(NSURL* url)
+                         {
+                             if (localRequestSerialNumber != self->requestSerialNumber)
+                             {
+                                 return;
+                             }
+                             
+                             self->currentUrl = url;
+                             
+                             if (url == nil)
+                             {
+                                 return;
+                             }
+                             
+                             CFHTTPMessageRef message = CFHTTPMessageCreateRequest(NULL, (CFStringRef)@"GET", (__bridge CFURLRef)self->currentUrl, kCFHTTPVersion1_1);
+                             
+                             if (seekStart > 0 && supportsSeek)
+                             {
+                                 CFHTTPMessageSetHeaderFieldValue(message, CFSTR("Range"), (__bridge CFStringRef)[NSString stringWithFormat:@"bytes=%lld-", seekStart]);
+                                 
+                                 discontinuous = YES;
+                             }
+                             
+                             for (NSString* key in self->requestHeaders)
+                             {
+                                 NSString* value = [self->requestHeaders objectForKey:key];
+                                 
+                                 CFHTTPMessageSetHeaderFieldValue(message, (__bridge CFStringRef)key, (__bridge CFStringRef)value);
+                             }
+                             
+                             CFHTTPMessageSetHeaderFieldValue(message, CFSTR("Accept"), CFSTR("*/*"));
+                             CFHTTPMessageSetHeaderFieldValue(message, CFSTR("Ice-MetaData"), CFSTR("0"));
+                             
+                             stream = CFReadStreamCreateForHTTPRequest(NULL, message);
+                             
+                             if (stream == nil)
+                             {
+                                 CFRelease(message);
+                                 
+                                 [self errorOccured];
+                                 
+                                 return;
+                             }
+                             
+                             CFReadStreamSetProperty(stream, (__bridge CFStringRef)NSStreamNetworkServiceTypeBackground, (__bridge CFStringRef)NSStreamNetworkServiceTypeBackground);
+                             
+                             if (!CFReadStreamSetProperty(stream, kCFStreamPropertyHTTPShouldAutoredirect, kCFBooleanTrue))
+                             {
+                                 CFRelease(message);
+                                 
+                                 [self errorOccured];
+                                 
+                                 return;
+                             }
+                             
+                             // Proxy support
+                             CFDictionaryRef proxySettings = CFNetworkCopySystemProxySettings();
+                             CFReadStreamSetProperty(stream, kCFStreamPropertyHTTPProxy, proxySettings);
+                             CFRelease(proxySettings);
+                             
+                             // SSL support
+                             if ([self->currentUrl.scheme caseInsensitiveCompare:@"https"] == NSOrderedSame)
+                             {
+                                 NSDictionary* sslSettings = [NSDictionary dictionaryWithObjectsAndKeys:
+                                                              (NSString*)kCFStreamSocketSecurityLevelNegotiatedSSL, kCFStreamSSLLevel,
+                                                              [NSNumber numberWithBool:NO], kCFStreamSSLValidatesCertificateChain,
+                                                              [NSNull null], kCFStreamSSLPeerName,
+                                                              nil];
+                                 
+                                 CFReadStreamSetProperty(stream, kCFStreamPropertySSLSettings, (__bridge CFTypeRef)sslSettings);
+                             }
+                             
+                             [self reregisterForEvents];
+                             
+                             self->httpStatusCode = 0;
+                             
+                             // Open
+                             if (!CFReadStreamOpen(stream))
+                             {
+                                 CFRelease(stream);
+                                 CFRelease(message);
+                                 
+                                 stream = 0;
+                                 
+                                 [self errorOccured];
+                                 
+                                 return;
+                             }
+                             
+                             self->isInErrorState = NO;
+                             
+                             CFRelease(message);
+                         });
 
-            [self errorOccured];
-
-            return;
-        }
-        
-        self->isInErrorState = NO;
-        
-        CFRelease(message);
-    });
+    }
 }
 
 -(UInt32) httpStatusCode

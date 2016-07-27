@@ -89,32 +89,25 @@ static void ReadStreamCallbackProc(CFReadStreamRef stream, CFStreamEventType eve
 
 -(void) dealloc
 {
-    if (stream)
-    {
-        if (eventsRunLoop)
-        {
-        	[self unregisterForEvents];
-        }
-        
-        [self close];
-        
-        stream = 0;
-    }
+    [self close];
 }
 
 -(void) close
 {
-    if (stream)
-    {
-        if (eventsRunLoop)
+    
+    @synchronized (self) {
+        if (stream)
         {
-            [self unregisterForEvents];
+            CFReadStreamClose(stream);
+            if (eventsRunLoop)
+            {
+                [self unregisterForEvents];
+            }
+            
+            CFRelease(stream);
+            stream = 0;
         }
-        
-        CFReadStreamClose(stream);
-        CFRelease(stream);
-        
-        stream = 0;
+
     }
 }
 

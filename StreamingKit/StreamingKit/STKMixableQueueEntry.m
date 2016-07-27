@@ -144,18 +144,22 @@ const int k_readBufferSize = 64 * 1024;
 
 - (void)changeToURL:(NSURL *)url {
     
-    [self.dataSource unregisterForEvents];
-    [self.dataSource close];
     
-    STKAutoRecoveringHTTPDataSource *recoveringDataSource = ((STKAutoRecoveringHTTPDataSource *)self.dataSource);
-    [((STKAdaptiveURLHTTPDataSource *)recoveringDataSource.innerDataSource) switchToURL:url];
-    
-    // If the entry is already in the loading state, start load with new URL now.
-    if (self.isLoading) {
+    [self invokeOnPlaybackThread:^{
+        [self.dataSource unregisterForEvents];
+        [self.dataSource close];
         
-        _isLoading = NO;
-        [self loadEntryWithOffset:_totalBytesRead];
-    }
+        STKAutoRecoveringHTTPDataSource *recoveringDataSource = ((STKAutoRecoveringHTTPDataSource *)self.dataSource);
+        [((STKAdaptiveURLHTTPDataSource *)recoveringDataSource.innerDataSource) switchToURL:url];
+        
+        // If the entry is already in the loading state, start load with new URL now.
+        if (self.isLoading) {
+            
+            _isLoading = NO;
+            [self loadEntryWithOffset:_totalBytesRead];
+        }
+
+    }];
 }
 
 
